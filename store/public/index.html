@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Capybara Co.</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Figtree:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --ink: #2a241f;
+        --paper: #f3eee4;
+        --moss: #3f4a3c;
+        --citrus: #c2410c;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; }
+      body {
+        background: var(--paper);
+        color: var(--ink);
+        font: 16px/1.45 Figtree, ui-sans-serif, system-ui, sans-serif;
+      }
+      button, input { font: inherit; }
+      button {
+        min-height: 44px;
+        border: 0;
+        border-radius: 8px;
+        padding: 0 16px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button:focus-visible, input:focus-visible { outline: 3px solid rgba(194, 65, 12, 0.45); outline-offset: 2px; }
+      .primary { background: var(--moss); color: #f6f3ea; }
+      .primary:disabled { opacity: 0.55; cursor: not-allowed; }
+      .ghost { background: transparent; color: var(--ink); }
+      .secondary { background: #fff; color: var(--ink); border: 1px solid rgba(42, 36, 31, 0.15); }
+      header {
+        position: sticky;
+        top: 0;
+        z-index: 5;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        min-height: 64px;
+        padding: 8px 24px;
+        background: var(--paper);
+        border-bottom: 1px solid rgba(42, 36, 31, 0.1);
+      }
+      .brand { font-family: Fraunces, Georgia, serif; font-size: 1.35rem; }
+      .kicker { font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--citrus); }
+      .hero {
+        display: grid;
+        gap: 16px;
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 40px 24px 12px;
+      }
+      .hero h1 { margin: 8px 0 0; font-family: Fraunces, Georgia, serif; font-size: clamp(2.4rem, 6vw, 4.2rem); line-height: 1.05; max-width: 14ch; }
+      .hero p { max-width: 42ch; color: rgba(42, 36, 31, 0.7); }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        gap: 20px;
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 24px 24px 80px;
+      }
+      .card {
+        display: flex;
+        flex-direction: column;
+        border: 1px solid rgba(42, 36, 31, 0.12);
+        border-radius: 16px;
+        background: #fff;
+        overflow: hidden;
+      }
+      .media {
+        display: grid;
+        place-items: center;
+        height: 180px;
+        font-size: 64px;
+        line-height: 1;
+      }
+      .card body, .body { padding: 16px 16px 18px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+      .card h2 { margin: 0; font-size: 1.1rem; }
+      .blurb { margin: 0; color: rgba(42, 36, 31, 0.62); font-size: 14px; min-height: 2.8em; }
+      .price { font-family: Fraunces, Georgia, serif; font-size: 1.35rem; margin-top: auto; }
+      .overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(42, 36, 31, 0.4);
+        z-index: 20;
+      }
+      .drawer {
+        position: fixed;
+        top: 0;
+        right: 0;
+        z-index: 21;
+        width: min(420px, 100%);
+        height: 100%;
+        background: var(--paper);
+        padding: 20px 20px 32px;
+        overflow: auto;
+        box-shadow: -16px 0 40px rgba(42, 36, 31, 0.12);
+      }
+      .line { display: flex; align-items: center; gap: 8px; padding: 12px 0; border-bottom: 1px solid rgba(42, 36, 31, 0.1); }
+      .line strong { flex: 1; }
+      .qty { display: flex; align-items: center; gap: 4px; }
+      .qty button { min-height: 36px; min-width: 36px; padding: 0; }
+      label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+      input {
+        width: 100%;
+        min-height: 44px;
+        border: 1px solid rgba(42, 36, 31, 0.15);
+        border-radius: 8px;
+        padding: 8px 12px;
+        background: #fff;
+      }
+      .err { color: #9f1239; font-size: 14px; }
+      .hidden { display: none !important; }
+      .ok { padding: 16px; border-radius: 12px; background: #fff; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div>
+        <p class="kicker">Demo shop</p>
+        <div class="brand">Capybara Co.</div>
+      </div>
+      <button class="ghost" id="open-cart" type="button" style="margin-left: auto">Cart · 0</button>
+    </header>
+    <section class="hero">
+      <p class="kicker">From the pond</p>
+      <h1>Goods for the chillest mammal.</h1>
+      <p>Towels, hats, and other slow objects. Demo checkout only — nothing ships, oranges stay in the picture.</p>
+    </section>
+    <div class="grid" id="grid"></div>
+    <div id="overlay" class="overlay hidden"></div>
+    <aside id="drawer" class="drawer hidden" role="dialog" aria-labelledby="cart-title">
+      <div style="display: flex; align-items: center; gap: 8px">
+        <h2 id="cart-title" class="brand" style="margin: 0">Cart</h2>
+        <button class="ghost" id="close-cart" type="button" style="margin-left: auto">Close</button>
+      </div>
+      <div id="empty" class="ok" style="margin-top: 24px">
+        <p>The pond is empty.</p>
+        <p style="color: rgba(42,36,31,.6); font-size: 14px">Add a towel, or an orange hat. Both are correct.</p>
+      </div>
+      <div id="filled" class="hidden">
+        <div id="lines"></div>
+        <p id="sum" style="font-family: Fraunces, Georgia, serif; font-size: 1.6rem; margin: 20px 0"></p>
+        <form id="checkout">
+          <div style="margin-bottom: 12px">
+            <label for="name">Name</label>
+            <input id="name" name="name" autocomplete="name" required />
+          </div>
+          <div style="margin-bottom: 16px">
+            <label for="email">Email</label>
+            <input id="email" name="email" type="email" autocomplete="email" required />
+          </div>
+          <p id="form-err" class="err"></p>
+          <button class="primary" type="submit" id="pay">Place demo order</button>
+        </form>
+      </div>
+      <div id="thanks" class="ok hidden" style="margin-top: 24px"></div>
+    </aside>
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const KEY = "capy-cart";
+      let products = [];
+      let cart = JSON.parse(localStorage.getItem(KEY) || "[]");
+
+      function esc(s) {
+        return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+      }
+      function money(cents) {
+        return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format((cents || 0) / 100);
+      }
+      function save() {
+        localStorage.setItem(KEY, JSON.stringify(cart));
+        render();
+      }
+      function count() {
+        return cart.reduce((n, l) => n + l.qty, 0);
+      }
+      function byId(id) {
+        return products.find((p) => p.id === id);
+      }
+      function add(id) {
+        const line = cart.find((l) => l.id === id);
+        if (line) line.qty = Math.min(9, line.qty + 1);
+        else cart.push({ id, qty: 1 });
+        save();
+      }
+      function setQty(id, qty) {
+        if (qty < 1) cart = cart.filter((l) => l.id !== id);
+        else cart = cart.map((l) => (l.id === id ? { ...l, qty: Math.min(9, qty) } : l));
+        save();
+      }
+      function openCart() {
+        $("overlay").classList.remove("hidden");
+        $("drawer").classList.remove("hidden");
+        $("close-cart").focus();
+      }
+      function closeCart() {
+        $("overlay").classList.add("hidden");
+        $("drawer").classList.add("hidden");
+      }
+      function render() {
+        $("open-cart").textContent = `Cart · ${count()}`;
+        $("grid").innerHTML = products
+          .map(
+            (p) => `<article class="card">
+              <div class="media" style="background:${esc(p.tint)}">${esc(p.glyph)}</div>
+              <div class="body">
+                <h2>${esc(p.name)}</h2>
+                <p class="blurb">${esc(p.blurb)}</p>
+                <p class="price">${money(p.price)}</p>
+                <button class="primary" type="button" data-add="${esc(p.id)}">Add to cart</button>
+              </div>
+            </article>`,
+          )
+          .join("");
+        const live = cart.map((l) => ({ ...l, p: byId(l.id) })).filter((l) => l.p);
+        cart = live.map(({ id, qty }) => ({ id, qty }));
+        if (!live.length) {
+          $("empty").classList.remove("hidden");
+          $("filled").classList.add("hidden");
+        } else {
+          $("empty").classList.add("hidden");
+          $("filled").classList.remove("hidden");
+          const total = live.reduce((n, l) => n + l.p.price * l.qty, 0);
+          $("sum").textContent = money(total);
+          $("lines").innerHTML = live
+            .map(
+              (l) => `<div class="line">
+                <strong>${esc(l.p.name)}</strong>
+                <div class="qty">
+                  <button class="secondary" type="button" data-qty="${esc(l.id)}" data-n="${l.qty - 1}" aria-label="Fewer">−</button>
+                  <span>${l.qty}</span>
+                  <button class="secondary" type="button" data-qty="${esc(l.id)}" data-n="${l.qty + 1}" aria-label="More">+</button>
+                </div>
+                <span>${money(l.p.price * l.qty)}</span>
+              </div>`,
+            )
+            .join("");
+        }
+      }
+
+      $("grid").onclick = (e) => {
+        const btn = e.target.closest("[data-add]");
+        if (!btn) return;
+        add(btn.dataset.add);
+      };
+      $("lines").onclick = (e) => {
+        const btn = e.target.closest("[data-qty]");
+        if (!btn) return;
+        setQty(btn.dataset.qty, Number(btn.dataset.n));
+      };
+      $("open-cart").onclick = openCart;
+      $("close-cart").onclick = closeCart;
+      $("overlay").onclick = closeCart;
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") closeCart();
+      });
+      $("checkout").onsubmit = async (e) => {
+        e.preventDefault();
+        $("form-err").textContent = "";
+        $("pay").disabled = true;
+        try {
+          const res = await fetch("/api/orders", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              name: $("name").value,
+              email: $("email").value,
+              items: cart,
+            }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.error || res.statusText);
+          cart = [];
+          localStorage.removeItem(KEY);
+          $("filled").classList.add("hidden");
+          $("empty").classList.add("hidden");
+          $("thanks").classList.remove("hidden");
+          $("thanks").innerHTML = `<p>Order received. Sit in the water.</p><p class="kicker" style="margin-top:8px">${esc(data.id)}</p><p>${money(data.total)} · demo, nothing ships.</p>`;
+          render();
+        } catch (err) {
+          $("form-err").textContent = err.message;
+        } finally {
+          $("pay").disabled = false;
+        }
+      };
+
+      fetch("/api/products")
+        .then((r) => r.json())
+        .then((rows) => {
+          products = rows;
+          render();
+        });
+    </script>
+  </body>
+</html>
