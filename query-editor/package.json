@@ -1,0 +1,13 @@
+{
+  "name": "crm-sql",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test_query.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "pg": "^8.13.1"
+  }
+}

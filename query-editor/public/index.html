@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SQL</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --ink: #1c1917;
+        --paper: #f4efe6;
+        --rust: #c2410c;
+      }
+      * { box-sizing: border-box; }
+      html, body { height: 100%; margin: 0; }
+      body {
+        background: var(--paper);
+        color: var(--ink);
+        font: 16px/1.4 Figtree, ui-sans-serif, system-ui, sans-serif;
+      }
+      button, input, textarea, select { font: inherit; }
+      button {
+        min-height: 44px;
+        border: 0;
+        border-radius: 6px;
+        padding: 0 16px;
+        font-weight: 600;
+        background: var(--ink);
+        color: var(--paper);
+        cursor: pointer;
+      }
+      button.ghost { background: transparent; color: var(--ink); }
+      button.secondary { background: #fff; color: var(--ink); border: 1px solid rgba(28,25,23,.15); }
+      input, textarea {
+        width: 100%;
+        border: 1px solid rgba(28,25,23,.15);
+        border-radius: 6px;
+        background: #fff;
+        padding: 10px 12px;
+        outline: none;
+      }
+      input:focus, textarea:focus { border-color: var(--rust); box-shadow: 0 0 0 3px rgba(194,65,12,.2); }
+      label { display: block; margin-bottom: 4px; font-size: 14px; font-weight: 500; }
+      .kicker { font-size: 12px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; color: var(--rust); }
+      .serif { font-family: Fraunces, Georgia, serif; }
+      .err { color: #b91c1c; font-size: 14px; }
+      .muted { color: rgba(28,25,23,.55); font-size: 13px; }
+      #login {
+        max-width: 28rem;
+        margin: 0 auto;
+        min-height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 24px;
+      }
+      #login h1 { margin: 8px 0 0; font-size: 2.5rem; }
+      #login form { margin-top: 2rem; display: grid; gap: 1rem; }
+      #app { display: none; height: 100%; grid-template-rows: auto 1fr; }
+      header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 20px;
+        border-bottom: 1px solid rgba(28,25,23,.1);
+      }
+      header h1 { margin: 0; font-size: 1.5rem; }
+      .shell { display: grid; grid-template-columns: 220px 1fr; min-height: 0; }
+      aside {
+        border-right: 1px solid rgba(28,25,23,.1);
+        overflow: auto;
+        padding: 12px;
+      }
+      aside button.tbl {
+        display: block;
+        width: 100%;
+        text-align: left;
+        background: transparent;
+        color: var(--ink);
+        min-height: 36px;
+        font-weight: 500;
+        font-size: 13px;
+        font-family: "IBM Plex Mono", ui-monospace, monospace;
+      }
+      aside button.tbl:hover { background: rgba(28,25,23,.06); }
+      .editor { display: grid; grid-template-rows: 200px auto 1fr; min-width: 0; min-height: 0; }
+      textarea#sql {
+        border: 0;
+        border-radius: 0;
+        font: 14px/1.5 "IBM Plex Mono", ui-monospace, monospace;
+        resize: none;
+        padding: 16px 20px;
+      }
+      .bar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 8px 16px;
+        border-top: 1px solid rgba(28,25,23,.1);
+        border-bottom: 1px solid rgba(28,25,23,.1);
+      }
+      .gridwrap { overflow: auto; min-height: 0; }
+      table { border-collapse: collapse; width: max-content; min-width: 100%; font-size: 13px; }
+      th, td {
+        border-bottom: 1px solid rgba(28,25,23,.1);
+        padding: 8px 12px;
+        text-align: left;
+        white-space: nowrap;
+        max-width: 28rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-family: "IBM Plex Mono", ui-monospace, monospace;
+      }
+      th { position: sticky; top: 0; background: var(--paper); font-family: Figtree, sans-serif; }
+      .hidden { display: none !important; }
+      @media (max-width: 800px) {
+        .shell { grid-template-columns: 1fr; }
+        aside { display: none; }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="login">
+      <p class="kicker">Desk</p>
+      <h1 class="serif">SQL</h1>
+      <p class="muted">Query runner for the CRM database.</p>
+      <form id="login-form">
+        <div>
+          <label for="user">Username</label>
+          <input id="user" autocomplete="username" />
+        </div>
+        <div>
+          <label for="password">Password</label>
+          <input id="password" type="password" autocomplete="current-password" />
+        </div>
+        <p id="login-err" class="err"></p>
+        <button type="submit">Sign in</button>
+      </form>
+    </div>
+    <div id="app">
+      <header>
+        <div>
+          <p class="kicker">Desk</p>
+          <h1 class="serif">SQL</h1>
+        </div>
+        <p id="meta" class="muted" style="margin-left:auto"></p>
+        <button class="ghost" id="logout" type="button">Log out</button>
+      </header>
+      <div class="shell">
+        <aside>
+          <p class="muted" style="margin: 4px 8px 8px">Tables</p>
+          <div id="tables"></div>
+        </aside>
+        <div class="editor">
+          <textarea id="sql" spellcheck="false">select * from accounts order by updated_at desc limit 50;</textarea>
+          <div class="bar">
+            <button type="button" id="run">Run query</button>
+            <span class="muted">⌘/Ctrl + Enter</span>
+            <span id="status" class="muted"></span>
+          </div>
+          <div class="gridwrap">
+            <p id="qerr" class="err" style="padding: 16px"></p>
+            <table id="grid"></table>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script>
+      const $ = (id) => document.getElementById(id);
+      async function api(path, opts = {}) {
+        const res = await fetch(path, {
+          credentials: "same-origin",
+          headers: { "content-type": "application/json", ...(opts.headers || {}) },
+          ...opts,
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || res.statusText);
+        return data;
+      }
+      function showApp() {
+        $("login").classList.add("hidden");
+        $("app").style.display = "grid";
+      }
+      function esc(s) {
+        return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+      }
+      function ident(name) {
+        return `"${String(name).replaceAll('"', '""')}"`;
+      }
+      async function loadTables() {
+        const rows = await api("/api/tables");
+        $("tables").innerHTML = rows
+          .map(
+            (t) =>
+              `<button class="tbl" type="button" data-schema="${esc(t.table_schema)}" data-name="${esc(t.table_name)}">${esc(t.table_schema === "public" ? t.table_name : t.table_schema + "." + t.table_name)}</button>`,
+          )
+          .join("");
+      }
+      function cell(v) {
+        if (v == null) return "";
+        if (typeof v === "object") return JSON.stringify(v);
+        return String(v);
+      }
+      async function run() {
+        $("qerr").textContent = "";
+        $("status").textContent = "Running…";
+        $("grid").innerHTML = "";
+        try {
+          const r = await api("/api/query", { method: "POST", body: JSON.stringify({ sql: $("sql").value }) });
+          const extra = r.truncated ? ` · showing ${r.rows.length}` : "";
+          $("status").textContent = `${r.command || "OK"} · ${r.rowCount ?? r.rows.length} rows · ${r.ms}ms${extra}`;
+          if (!r.columns.length) return;
+            const head = `<thead><tr>${r.columns.map((c) => `<th>${esc(c)}</th>`).join("")}</tr></thead>`;
+          const body = `<tbody>${r.rows
+            .map((row) => `<tr>${r.columns.map((c) => `<td title="${esc(cell(row[c]))}">${esc(cell(row[c]))}</td>`).join("")}</tr>`)
+            .join("")}</tbody>`;
+          $("grid").innerHTML = head + body;
+        } catch (err) {
+          $("status").textContent = "";
+          $("qerr").textContent = err.message;
+        }
+      }
+      $("login-form").onsubmit = async (e) => {
+        e.preventDefault();
+        $("login-err").textContent = "";
+        try {
+          await api("/api/login", {
+            method: "POST",
+            body: JSON.stringify({ user: $("user").value, password: $("password").value }),
+          });
+          showApp();
+          await loadTables();
+        } catch (err) {
+          $("login-err").textContent = err.message;
+        }
+      };
+      $("logout").onclick = async () => {
+        await api("/api/logout", { method: "POST", body: "{}" });
+        location.reload();
+      };
+      $("run").onclick = run;
+      $("sql").addEventListener("keydown", (e) => {
+        if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+          e.preventDefault();
+          run();
+        }
+      });
+      $("tables").onclick = (e) => {
+        const btn = e.target.closest("button.tbl");
+        if (!btn) return;
+        $("sql").value = `select * from ${ident(btn.dataset.schema)}.${ident(btn.dataset.name)} limit 50;`;
+        run();
+      };
+      api("/api/me")
+        .then(async () => {
+          showApp();
+          await loadTables();
+        })
+        .catch(() => {});
+    </script>
+  </body>
+</html>
