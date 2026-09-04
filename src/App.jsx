@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   accountsToCsv,
+  addDays,
   CLOSED_STAGES,
   csvToAccounts,
   isDue,
@@ -101,6 +102,14 @@ export default function App() {
     await load();
   }
 
+  async function snooze(id, days) {
+    try {
+      await patchAccount(id, { follow_up_on: addDays(today, days) });
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
   async function moveStage(id, stage) {
     if (stage === "lost") {
       setPendingLost(id);
@@ -196,9 +205,9 @@ export default function App() {
             <h2 className="text-sm font-semibold text-rust">Due now · {due.length}</h2>
             <ul className="mt-2">
               {due.map((account) => (
-                <li key={account.id}>
+                <li key={account.id} className="flex items-center gap-2 py-1">
                   <button
-                    className="flex w-full items-baseline gap-3 py-2 text-left text-sm hover:text-rust"
+                    className="flex min-w-0 flex-1 items-baseline gap-3 py-2 text-left text-sm hover:text-rust"
                     onClick={() => setEditing(account)}
                   >
                     <span className="font-semibold">{account.name}</span>
@@ -207,6 +216,12 @@ export default function App() {
                       {account.follow_up_on}
                     </span>
                   </button>
+                  <Button type="button" variant="secondary" className="h-8 min-h-8 px-2 text-xs" onClick={() => snooze(account.id, 1)}>
+                    +1d
+                  </Button>
+                  <Button type="button" variant="secondary" className="h-8 min-h-8 px-2 text-xs" onClick={() => snooze(account.id, 7)}>
+                    +1w
+                  </Button>
                 </li>
               ))}
             </ul>

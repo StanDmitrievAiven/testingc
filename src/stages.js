@@ -75,6 +75,12 @@ export function todayYmd(now = new Date()) {
   return `${now.getFullYear()}-${m}-${d}`;
 }
 
+export function addDays(ymd, days) {
+  const [y, m, d] = String(ymd).split("-").map(Number);
+  if (!y || !m || !d) throw new Error("invalid date");
+  return todayYmd(new Date(y, m - 1, d + Number(days)));
+}
+
 export function isDue(account, today = todayYmd()) {
   if (!account?.follow_up_on) return false;
   if (account.stage === "won" || account.stage === "lost") return false;
