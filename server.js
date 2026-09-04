@@ -129,10 +129,10 @@ app.post("/api/accounts", auth, async (req, res) => {
   try {
     const a = parseAccount(req.body);
     const { rows } = await db.query(
-      `insert into accounts (name, company, email, phone, stage, value, notes, next_action, follow_up_on)
-       values ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+      `insert into accounts (name, company, email, phone, stage, value, notes, next_action, follow_up_on, lost_reason)
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
        returning *`,
-      [a.name, a.company || "", a.email || "", a.phone || "", a.stage, a.value, a.notes || "", a.next_action || "", a.follow_up_on || ""],
+      [a.name, a.company || "", a.email || "", a.phone || "", a.stage, a.value, "", a.next_action || "", a.follow_up_on || "", a.lost_reason || ""],
     );
     res.status(201).json(rows[0]);
   } catch (err) {
@@ -163,6 +163,29 @@ app.delete("/api/accounts/:id", auth, async (req, res) => {
   res.status(204).end();
 });
 
+app.get("/api/accounts/:id/notes", auth, async (req, res) => {
+  const { rows } = await db.query(
+    "select id, body, created_at from account_notes where account_id = $1 order by created_at asc",
+    [req.params.id],
+  );
+  res.json(rows);
+});
+
+app.post("/api/accounts/:id/notes", auth, async (req, res) => {
+  const body = typeof req.body?.body === "string" ? req.body.body.trim() : "";
+  if (!body) return res.status(400).json({ error: "body is required" });
+  if (body.length > 5000) return res.status(400).json({ error: "body is too long" });
+  try {
+    const { rows } = await db.query(
+      "insert into account_notes (account_id, body) values ($1, $2) returning id, body, created_at",
+      [req.params.id, body],
+    );
+    res.status(201).json(rows[0]);
+  } catch {
+    res.status(404).json({ error: "not found" });
+  }
+});
+
 app.use(express.static("dist"));
 app.get("*", (req, res, next) => {
   if (req.path.startsWith("/api")) return next();
@@ -187,6 +210,7 @@ async function migrate() {
       notes text not null default '',
       next_action text not null default '',
       follow_up_on text not null default '',
+      lost_reason text not null default '',
       created_at timestamptz not null default now(),
       updated_at timestamptz not null default now(),
       constraint accounts_stage_check check (stage in ('lead','qualified','proposal','negotiation','won','lost'))
@@ -194,6 +218,21 @@ async function migrate() {
   `);
   await db.query(`alter table accounts add column if not exists next_action text not null default ''`);
   await db.query(`alter table accounts add column if not exists follow_up_on text not null default ''`);
+  await db.query(`alter table accounts add column if not exists lost_reason text not null default ''`);
+  await db.query(`
+    create table if not exists account_notes (
+      id uuid primary key default gen_random_uuid(),
+      account_id uuid not null references accounts(id) on delete cascade,
+      body text not null,
+      created_at timestamptz not null default now()
+    )
+  `);
+  await db.query(`
+    insert into account_notes (account_id, body, created_at)
+    select id, notes, created_at from accounts
+    where notes <> ''
+      and not exists (select 1 from account_notes n where n.account_id = accounts.id)
+  `);
 }
 
 migrate()

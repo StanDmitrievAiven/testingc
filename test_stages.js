@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { isDue, isStage, parseAccount, STAGES } from "./src/stages.js";
+import { isDue, isStage, parseAccount, STAGES, accountsToCsv, csvToAccounts } from "./src/stages.js";
 
 assert.equal(STAGES.length, 6);
 assert.equal(isStage("lead"), true);
@@ -15,7 +15,16 @@ assert.throws(() => parseAccount({ name: "x", stage: "nope" }), /invalid stage/)
 assert.throws(() => parseAccount({ name: "x", value: -1 }), /invalid value/);
 
 const patched = parseAccount({ stage: "won" }, { partial: true });
-assert.deepEqual(patched, { stage: "won" });
+assert.deepEqual(patched, { stage: "won", lost_reason: "" });
+
+assert.throws(() => parseAccount({ name: "x", stage: "lost" }), /lost_reason is required/);
+assert.equal(parseAccount({ name: "x", stage: "lost", lost_reason: "timing" }).lost_reason, "timing");
+assert.equal(parseAccount({ stage: "proposal", lost_reason: "timing" }, { partial: true }).lost_reason, "");
+
+const csv = accountsToCsv([{ name: 'Acme, Inc', company: "", email: "", phone: "", stage: "lead", value: 3, next_action: "", follow_up_on: "", lost_reason: "" }]);
+assert.ok(csv.includes('"Acme, Inc"'));
+assert.equal(csvToAccounts(csv)[0].name, "Acme, Inc");
+assert.equal(csvToAccounts(csv)[0].value, 3);
 
 const follow = parseAccount({ name: "x", next_action: " ping ", follow_up_on: "2026-09-10" });
 assert.equal(follow.next_action, "ping");

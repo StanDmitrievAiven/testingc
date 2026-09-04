@@ -7,7 +7,20 @@ export const STAGES = [
   { id: "lost", label: "Lost" },
 ];
 
+export const OPEN_STAGES = STAGES.filter((s) => s.id !== "won" && s.id !== "lost");
+export const CLOSED_STAGES = STAGES.filter((s) => s.id === "won" || s.id === "lost");
+export const CSV_COLS = ["name", "company", "email", "phone", "stage", "value", "next_action", "follow_up_on", "lost_reason"];
+
+export const LOST_REASONS = [
+  { id: "timing", label: "Timing" },
+  { id: "budget", label: "Budget" },
+  { id: "competitor", label: "Competitor" },
+  { id: "no_reply", label: "No reply" },
+  { id: "other", label: "Other" },
+];
+
 export const STAGE_IDS = STAGES.map((s) => s.id);
+const LOST_IDS = LOST_REASONS.map((r) => r.id);
 
 export function isStage(value) {
   return STAGE_IDS.includes(value);
@@ -27,7 +40,6 @@ export function parseAccount(input, { partial = false } = {}) {
   str("company", 200);
   str("email", 320);
   str("phone", 50);
-  str("notes", 5000);
   str("next_action", 200);
   if (!partial && !out.name) throw new Error("name is required");
   if (input.follow_up_on !== undefined) {
@@ -47,6 +59,13 @@ export function parseAccount(input, { partial = false } = {}) {
     if (!Number.isInteger(n) || n < 0 || n > 1e12) throw new Error("invalid value");
     out.value = n;
   } else if (!partial) out.value = 0;
+  if (input.lost_reason !== undefined) {
+    if (input.lost_reason === null || input.lost_reason === "") out.lost_reason = "";
+    else if (!LOST_IDS.includes(input.lost_reason)) throw new Error("invalid lost_reason");
+    else out.lost_reason = input.lost_reason;
+  } else if (!partial) out.lost_reason = "";
+  if (out.stage && out.stage !== "lost") out.lost_reason = "";
+  if (out.stage === "lost" && !out.lost_reason) throw new Error("lost_reason is required");
   return out;
 }
 
@@ -60,4 +79,56 @@ export function isDue(account, today = todayYmd()) {
   if (!account?.follow_up_on) return false;
   if (account.stage === "won" || account.stage === "lost") return false;
   return account.follow_up_on <= today;
+}
+
+export function csvLine(fields) {
+  return fields
+    .map((v) => {
+      const s = String(v ?? "");
+      return /[",\n\r]/.test(s) ? `"${s.replaceAll('"', '""')}"` : s;
+    })
+    .join(",");
+}
+
+export function splitCsvLine(line) {
+  const out = [];
+  let cur = "";
+  let quoted = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (quoted) {
+      if (c === '"' && line[i + 1] === '"') {
+        cur += '"';
+        i += 1;
+      } else if (c === '"') quoted = false;
+      else cur += c;
+    } else if (c === '"') quoted = true;
+    else if (c === ",") {
+      out.push(cur);
+      cur = "";
+    } else cur += c;
+  }
+  out.push(cur);
+  return out;
+}
+
+export function accountsToCsv(rows) {
+  const header = csvLine(CSV_COLS);
+  const body = rows.map((row) => csvLine(CSV_COLS.map((k) => (k === "value" ? Number(row[k] || 0) : row[k] || ""))));
+  return [header, ...body].join("\n");
+}
+
+export function csvToAccounts(text) {
+  const lines = text.replace(/^\uFEFF/, "").trim().split(/\r?\n/).filter(Boolean);
+  if (lines.length < 2) return [];
+  const headers = splitCsvLine(lines[0]).map((h) => h.trim());
+  return lines.slice(1).map((line) => {
+    const cells = splitCsvLine(line);
+    const row = {};
+    headers.forEach((h, i) => {
+      if (CSV_COLS.includes(h)) row[h] = cells[i] ?? "";
+    });
+    if (row.value !== undefined && row.value !== "") row.value = Number(row.value);
+    return parseAccount(row);
+  });
 }
