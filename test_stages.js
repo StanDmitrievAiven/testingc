@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { addDays, isDue, isStage, parseAccount, stageMoveNote, STAGES, accountsToCsv, csvToAccounts } from "./src/stages.js";
+import { addDays, isDue, isStale, isStage, parseAccount, stageMoveNote, STAGES, accountsToCsv, csvToAccounts } from "./src/stages.js";
 
 assert.equal(STAGES.length, 6);
 assert.equal(isStage("lead"), true);
@@ -44,5 +44,11 @@ assert.equal(addDays("2026-01-31", 1), "2026-02-01");
 assert.equal(stageMoveNote("lead", "qualified"), "Moved Lead → Qualified");
 assert.equal(stageMoveNote("lead", "lead"), null);
 assert.equal(stageMoveNote("negotiation", "won"), "Moved Negotiation → Won");
+
+const staleNow = Date.parse("2026-09-04T12:00:00Z");
+assert.equal(isStale({ stage: "lead", updated_at: "2026-01-01T00:00:00Z", follow_up_on: "" }, { now: staleNow, today: "2026-09-04" }), true);
+assert.equal(isStale({ stage: "lead", updated_at: "2026-09-03T00:00:00Z", follow_up_on: "" }, { now: staleNow, today: "2026-09-04" }), false);
+assert.equal(isStale({ stage: "won", updated_at: "2026-01-01T00:00:00Z" }, { now: staleNow, today: "2026-09-04" }), false);
+assert.equal(isStale({ stage: "lead", updated_at: "2026-01-01T00:00:00Z", follow_up_on: "2026-09-04" }, { now: staleNow, today: "2026-09-04" }), false);
 
 console.log("ok");

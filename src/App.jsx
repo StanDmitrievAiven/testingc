@@ -5,6 +5,7 @@ import {
   CLOSED_STAGES,
   csvToAccounts,
   isDue,
+  isStale,
   LOST_REASONS,
   OPEN_STAGES,
   STAGES,
@@ -91,6 +92,13 @@ export default function App() {
       filtered
         .filter((a) => isDue(a, today))
         .sort((a, b) => a.follow_up_on.localeCompare(b.follow_up_on)),
+    [filtered, today],
+  );
+  const stale = useMemo(
+    () =>
+      filtered
+        .filter((a) => isStale(a, { today }))
+        .sort((a, b) => String(a.updated_at).localeCompare(String(b.updated_at))),
     [filtered, today],
   );
   const openRows = filtered.filter((a) => a.stage !== "won" && a.stage !== "lost");
@@ -227,6 +235,25 @@ export default function App() {
             </ul>
           </section>
         ) : null}
+        {stale.length ? (
+          <section className="mb-6 rounded-xl border border-ink/15 bg-white p-4">
+            <h2 className="text-sm font-semibold text-ink/70">Quiet for 14+ days · {stale.length}</h2>
+            <ul className="mt-2">
+              {stale.map((account) => (
+                <li key={account.id}>
+                  <button
+                    className="flex w-full items-baseline gap-3 py-2 text-left text-sm hover:text-rust"
+                    onClick={() => setEditing(account)}
+                  >
+                    <span className="font-semibold">{account.name}</span>
+                    <span className="truncate text-ink/60">{account.company || account.next_action || "No recent activity"}</span>
+                    <span className="ml-auto shrink-0 text-ink/50">{String(account.updated_at).slice(0, 10)}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
         <div className="grid auto-cols-[minmax(240px,1fr)] grid-flow-col gap-4 overflow-x-auto pb-6">
           {boardStages.map((stage) => {
             const rows = filtered.filter((a) => a.stage === stage.id);
@@ -330,6 +357,7 @@ function StageColumn({ stage, rows, today, onOpen, onStage }) {
 
 function AccountCard({ account, today, onOpen, onStage }) {
   const due = isDue(account, today);
+  const quiet = isStale(account, { today });
   const reason = LOST_REASONS.find((r) => r.id === account.lost_reason);
   return (
     <Card className="p-4 transition hover:border-ink/30">
@@ -346,6 +374,7 @@ function AccountCard({ account, today, onOpen, onStage }) {
             {account.follow_up_on ? ` · ${account.follow_up_on}` : ""}
           </p>
         ) : null}
+        {quiet ? <p className="mt-2 text-xs font-medium text-ink/45">Quiet 14+ days</p> : null}
         {account.stage === "lost" && reason ? <p className="mt-1 text-xs text-ink/50">Lost · {reason.label}</p> : null}
       </button>
       <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-sm">

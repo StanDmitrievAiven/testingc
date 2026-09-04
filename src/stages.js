@@ -93,6 +93,16 @@ export function isDue(account, today = todayYmd()) {
   return account.follow_up_on <= today;
 }
 
+export const STALE_DAYS = 14;
+
+export function isStale(account, { now = Date.now(), today = todayYmd() } = {}) {
+  if (!account || account.stage === "won" || account.stage === "lost") return false;
+  if (isDue(account, today)) return false;
+  const t = new Date(account.updated_at).getTime();
+  if (Number.isNaN(t)) return false;
+  return now - t >= STALE_DAYS * 86400000;
+}
+
 export function csvLine(fields) {
   return fields
     .map((v) => {
