@@ -81,6 +81,12 @@ export function addDays(ymd, days) {
   return todayYmd(new Date(y, m - 1, d + Number(days)));
 }
 
+export function stageMoveNote(from, to) {
+  if (!from || !to || from === to) return null;
+  const label = (id) => STAGES.find((s) => s.id === id)?.label || id;
+  return `Moved ${label(from)} → ${label(to)}`;
+}
+
 export function isDue(account, today = todayYmd()) {
   if (!account?.follow_up_on) return false;
   if (account.stage === "won" || account.stage === "lost") return false;

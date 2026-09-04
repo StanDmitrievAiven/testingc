@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import path from "node:path";
 import express from "express";
 import pg from "pg";
-import { parseAccount } from "./src/stages.js";
+import { parseAccount, stageMoveNote } from "./src/stages.js";
 
 const PORT = Number(process.env.PORT || 3000);
 const AUTH_USER = process.env.AUTH_USER || "";
@@ -145,12 +145,17 @@ app.patch("/api/accounts/:id", auth, async (req, res) => {
     const a = parseAccount(req.body, { partial: true });
     const fields = Object.keys(a);
     if (!fields.length) return res.status(400).json({ error: "nothing to update" });
+    const prev = await db.query("select stage from accounts where id = $1", [req.params.id]);
+    if (!prev.rows[0]) return res.status(404).json({ error: "not found" });
     const sets = fields.map((k, i) => `${k} = $${i + 2}`);
     const { rows } = await db.query(
       `update accounts set ${sets.join(", ")}, updated_at = now() where id = $1 returning *`,
       [req.params.id, ...fields.map((k) => a[k])],
     );
-    if (!rows[0]) return res.status(404).json({ error: "not found" });
+    const note = stageMoveNote(prev.rows[0].stage, a.stage);
+    if (note) {
+      await db.query("insert into account_notes (account_id, body) values ($1, $2)", [req.params.id, note]);
+    }
     res.json(rows[0]);
   } catch (err) {
     res.status(400).json({ error: err.message });

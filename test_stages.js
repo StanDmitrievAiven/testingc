@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { addDays, isDue, isStage, parseAccount, STAGES, accountsToCsv, csvToAccounts } from "./src/stages.js";
+import { addDays, isDue, isStage, parseAccount, stageMoveNote, STAGES, accountsToCsv, csvToAccounts } from "./src/stages.js";
 
 assert.equal(STAGES.length, 6);
 assert.equal(isStage("lead"), true);
@@ -40,5 +40,9 @@ assert.equal(isDue({ follow_up_on: "" }, "2026-09-04"), false);
 assert.equal(addDays("2026-09-04", 1), "2026-09-05");
 assert.equal(addDays("2026-09-04", 7), "2026-09-11");
 assert.equal(addDays("2026-01-31", 1), "2026-02-01");
+
+assert.equal(stageMoveNote("lead", "qualified"), "Moved Lead → Qualified");
+assert.equal(stageMoveNote("lead", "lead"), null);
+assert.equal(stageMoveNote("negotiation", "won"), "Moved Negotiation → Won");
 
 console.log("ok");
