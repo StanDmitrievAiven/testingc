@@ -129,10 +129,10 @@ app.post("/api/accounts", auth, async (req, res) => {
   try {
     const a = parseAccount(req.body);
     const { rows } = await db.query(
-      `insert into accounts (name, company, email, phone, stage, value, notes)
-       values ($1,$2,$3,$4,$5,$6,$7)
+      `insert into accounts (name, company, email, phone, stage, value, notes, next_action, follow_up_on)
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$9)
        returning *`,
-      [a.name, a.company || "", a.email || "", a.phone || "", a.stage, a.value, a.notes || ""],
+      [a.name, a.company || "", a.email || "", a.phone || "", a.stage, a.value, a.notes || "", a.next_action || "", a.follow_up_on || ""],
     );
     res.status(201).json(rows[0]);
   } catch (err) {
@@ -185,11 +185,15 @@ async function migrate() {
       stage text not null default 'lead',
       value integer not null default 0,
       notes text not null default '',
+      next_action text not null default '',
+      follow_up_on text not null default '',
       created_at timestamptz not null default now(),
       updated_at timestamptz not null default now(),
       constraint accounts_stage_check check (stage in ('lead','qualified','proposal','negotiation','won','lost'))
     )
   `);
+  await db.query(`alter table accounts add column if not exists next_action text not null default ''`);
+  await db.query(`alter table accounts add column if not exists follow_up_on text not null default ''`);
 }
 
 migrate()

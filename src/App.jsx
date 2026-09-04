@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
-import { STAGES } from "./stages.js";
+import { isDue, STAGES, todayYmd } from "./stages.js";
 import { Badge } from "./components/ui/badge.jsx";
 import { Button } from "./components/ui/button.jsx";
 import { Card } from "./components/ui/card.jsx";
 import { Input, Label, Textarea } from "./components/ui/input.jsx";
+import { cn } from "./lib/utils.js";
 
-const empty = { name: "", company: "", email: "", phone: "", stage: "lead", value: 0, notes: "" };
+const empty = { name: "", company: "", email: "", phone: "", stage: "lead", value: 0, notes: "", next_action: "", follow_up_on: "" };
+const selectClass = "min-h-11 w-full rounded-md border border-ink/15 bg-white px-3 text-sm";
 
 async function api(path, opts = {}) {
   const res = await fetch(path, {
@@ -52,9 +54,27 @@ export default function App() {
     const q = query.trim().toLowerCase();
     if (!q) return accounts;
     return accounts.filter((a) =>
-      [a.name, a.company, a.email, a.notes].join(" ").toLowerCase().includes(q),
+      [a.name, a.company, a.email, a.notes, a.next_action].join(" ").toLowerCase().includes(q),
     );
   }, [accounts, query]);
+
+  const today = todayYmd();
+  const due = useMemo(
+    () =>
+      filtered
+        .filter((a) => isDue(a, today))
+        .sort((a, b) => a.follow_up_on.localeCompare(b.follow_up_on)),
+    [filtered, today],
+  );
+
+  async function moveStage(id, stage) {
+    try {
+      await api(`/api/accounts/${id}`, { method: "PATCH", body: JSON.stringify({ stage }) });
+      await load();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
 
   if (!ready) {
     return <div className="p-8 text-sm text-ink/60">Loading…</div>;
@@ -94,6 +114,27 @@ export default function App() {
 
       <main className="mx-auto max-w-[1440px] px-6 py-6">
         {error ? <p className="mb-4 text-sm text-red-700">{error}</p> : null}
+        {due.length ? (
+          <section className="mb-6 rounded-xl border border-rust/25 bg-white p-4">
+            <h2 className="text-sm font-semibold text-rust">Due now · {due.length}</h2>
+            <ul className="mt-2">
+              {due.map((account) => (
+                <li key={account.id}>
+                  <button
+                    className="flex w-full items-baseline gap-3 py-2 text-left text-sm hover:text-rust"
+                    onClick={() => setEditing(account)}
+                  >
+                    <span className="font-semibold">{account.name}</span>
+                    <span className="truncate text-ink/60">{account.next_action || "Follow up"}</span>
+                    <span className={cn("ml-auto shrink-0", account.follow_up_on < today ? "text-rust" : "text-ink/50")}>
+                      {account.follow_up_on}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
         <div className="grid auto-cols-[minmax(240px,1fr)] grid-flow-col gap-4 overflow-x-auto pb-6">
           {STAGES.map((stage) => {
             const rows = filtered.filter((a) => a.stage === stage.id);
@@ -110,20 +151,13 @@ export default function App() {
                     </p>
                   ) : (
                     rows.map((account) => (
-                      <button
+                      <AccountCard
                         key={account.id}
-                        className="text-left"
-                        onClick={() => setEditing(account)}
-                      >
-                        <Card className="p-4 transition hover:border-ink/30">
-                          <div className="flex items-start justify-between gap-2">
-                            <p className="font-semibold leading-tight">{account.name}</p>
-                            <Badge stage={account.stage} />
-                          </div>
-                          <p className="mt-1 text-sm text-ink/60">{account.company || "—"}</p>
-                          <p className="mt-3 font-serif text-lg">{money(account.value)}</p>
-                        </Card>
-                      </button>
+                        account={account}
+                        today={today}
+                        onOpen={() => setEditing(account)}
+                        onStage={(stage) => moveStage(account.id, stage)}
+                      />
                     ))
                   )}
                 </div>
@@ -145,6 +179,43 @@ export default function App() {
         />
       ) : null}
     </div>
+  );
+}
+
+function AccountCard({ account, today, onOpen, onStage }) {
+  const due = isDue(account, today);
+  return (
+    <Card className="p-4 transition hover:border-ink/30">
+      <button className="w-full text-left" onClick={onOpen}>
+        <div className="flex items-start justify-between gap-2">
+          <p className="font-semibold leading-tight">{account.name}</p>
+          <Badge stage={account.stage} />
+        </div>
+        <p className="mt-1 text-sm text-ink/60">{account.company || "—"}</p>
+        <p className="mt-3 font-serif text-lg">{money(account.value)}</p>
+        {account.next_action || account.follow_up_on ? (
+          <p className={cn("mt-2 text-sm", due ? "text-rust" : "text-ink/55")}>
+            {account.next_action || "Follow up"}
+            {account.follow_up_on ? ` · ${account.follow_up_on}` : ""}
+          </p>
+        ) : null}
+      </button>
+      <label className="sr-only" htmlFor={`stage-${account.id}`}>
+        Stage
+      </label>
+      <select
+        id={`stage-${account.id}`}
+        className={cn(selectClass, "mt-3 h-9 min-h-9")}
+        value={account.stage}
+        onChange={(e) => onStage(e.target.value)}
+      >
+        {STAGES.map((s) => (
+          <option key={s.id} value={s.id}>
+            {s.label}
+          </option>
+        ))}
+      </select>
+    </Card>
   );
 }
 
@@ -194,7 +265,12 @@ function Login({ onOk }) {
 }
 
 function Editor({ account, onClose, onSaved, onError }) {
-  const [form, setForm] = useState(account);
+  const [form, setForm] = useState({
+    ...empty,
+    ...account,
+    next_action: account.next_action || "",
+    follow_up_on: (account.follow_up_on || "").slice(0, 10),
+  });
   const [busy, setBusy] = useState(false);
   const isNew = !account.id;
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
@@ -245,7 +321,7 @@ function Editor({ account, onClose, onSaved, onError }) {
               <Label htmlFor="stage">Stage</Label>
               <select
                 id="stage"
-                className="min-h-11 w-full rounded-md border border-ink/15 bg-white px-3 text-sm"
+                className={selectClass}
                 value={form.stage}
                 onChange={set("stage")}
               >
@@ -259,6 +335,16 @@ function Editor({ account, onClose, onSaved, onError }) {
             <div>
               <Label htmlFor="value">Value (USD)</Label>
               <Input id="value" type="number" min="0" step="1" value={form.value} onChange={set("value")} />
+            </div>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <Label htmlFor="next_action">Next action</Label>
+              <Input id="next_action" placeholder="Call, send proposal…" value={form.next_action} onChange={set("next_action")} />
+            </div>
+            <div>
+              <Label htmlFor="follow_up_on">Follow up on</Label>
+              <Input id="follow_up_on" type="date" value={form.follow_up_on} onChange={set("follow_up_on")} />
             </div>
           </div>
           <div>

@@ -28,7 +28,16 @@ export function parseAccount(input, { partial = false } = {}) {
   str("email", 320);
   str("phone", 50);
   str("notes", 5000);
+  str("next_action", 200);
   if (!partial && !out.name) throw new Error("name is required");
+  if (input.follow_up_on !== undefined) {
+    if (input.follow_up_on === null || input.follow_up_on === "") out.follow_up_on = "";
+    else {
+      const day = String(input.follow_up_on).slice(0, 10);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) throw new Error("invalid follow_up_on");
+      out.follow_up_on = day;
+    }
+  } else if (!partial) out.follow_up_on = "";
   if (input.stage !== undefined) {
     if (!isStage(input.stage)) throw new Error("invalid stage");
     out.stage = input.stage;
@@ -39,4 +48,16 @@ export function parseAccount(input, { partial = false } = {}) {
     out.value = n;
   } else if (!partial) out.value = 0;
   return out;
+}
+
+export function todayYmd(now = new Date()) {
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  return `${now.getFullYear()}-${m}-${d}`;
+}
+
+export function isDue(account, today = todayYmd()) {
+  if (!account?.follow_up_on) return false;
+  if (account.stage === "won" || account.stage === "lost") return false;
+  return account.follow_up_on <= today;
 }
