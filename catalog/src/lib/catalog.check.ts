@@ -146,8 +146,8 @@ const schemaOf = (assetId: string) => {
 }
 assert.deepEqual(
   [...new Set(keys.map((edge) => schemaOf(edge.sourceAssetId)))].sort(),
-  ['crm-pg:public', 'pg-37c7de3b:public'],
-  'only the webshop and CRM schemas have foreign keys recorded',
+  ['crm-pg:public', 'marmot-pg:public', 'pg-37c7de3b:public'],
+  'the webshop, CRM and Marmot schemas have foreign keys recorded',
 )
 assert.ok(
   keys.every((edge) => schemaOf(edge.sourceAssetId) === schemaOf(edge.destAssetId)),
@@ -172,8 +172,42 @@ const pgTables = catalog.assets.filter((asset) => asset.serviceId === 'pg-37c7de
 assert.equal(pgTables.length, 5)
 assert.equal(pgTables.filter((asset) => related.has(asset.id)).length, 4)
 
-// The folder the tab must stay away from: 58 tables, no keys, most without a column list.
+// Marmot's model was read from the live service's constraints, so what has to hold is that it came
+// across whole: 61 keys over 44 of its 57 tables, every one of them drawable.
 const marmot = catalog.assets.filter((asset) => asset.serviceId === 'marmot-pg')
-assert.ok(marmot.length > 50 && !marmot.some((asset) => related.has(asset.id)))
+const marmotKeys = keys.filter((edge) => schemaOf(edge.sourceAssetId) === 'marmot-pg:public')
+assert.equal(marmot.length, 57)
+assert.equal(marmotKeys.length, 61, 'every foreign key in the schema is recorded')
+assert.equal(new Set(marmot.filter((asset) => related.has(asset.id)).map((a) => a.id)).size, 44)
+
+// The three shapes that would otherwise go untested: a self-reference, two keys from one table to
+// the same target, and a key that lands on a unique column rather than the primary key.
+assert.ok(marmotKeys.some((edge) => edge.sourceAssetId === edge.destAssetId), 'doc_pages nests itself')
+assert.equal(
+  marmotKeys.filter((edge) => edge.sourceAssetId === 'marmot.lineage_edges' && edge.destAssetId === 'marmot.assets').length,
+  2,
+  'lineage_edges points at assets twice, once per endpoint',
+)
+assert.ok(
+  marmotKeys.some((edge) => edge.destColumn === 'mrn'),
+  'the MRN keys are kept as MRN keys rather than rewritten to id',
+)
+
+// The schema's own description quotes these counts, and a description that silently stops matching
+// the data is worse than none: this is what makes changing the tables force the prose to follow.
+const marmotSchemaText = folderDescriptions['marmot-pg:public']
+assert.ok(
+  [57, 44, 61, 13].every((count) => marmotSchemaText.includes(String(count))),
+  `the schema description still quotes its real counts: ${marmotSchemaText}`,
+)
+
+// A table with no keys keeps no column list, so the honest gap stays visible rather than being
+// filled with invented descriptions.
+const bare = marmot.filter((asset) => !related.has(asset.id))
+assert.equal(bare.length, 13)
+assert.ok(
+  bare.every((asset) => asset.columns.length === 0 && /No keys and no column list/.test(asset.description)),
+  'the unrelated tables say why they are empty',
+)
 
 console.log(`catalog: ok (${catalog.assets.length} assets, ${catalog.assets.reduce((n, a) => n + a.columns.length, 0)} columns, ${Object.keys(folderDescriptions).length} folders, ${catalog.lineage.length} lineage edges)`)

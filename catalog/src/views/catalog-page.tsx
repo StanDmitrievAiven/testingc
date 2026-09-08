@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { ArrowLeftIcon, ArrowRightIcon, PencilIcon } from 'lucide-react'
 import { LineageCanvas } from '@/components/lineage/lineage-canvas'
 import { PageHeader } from '@/components/page-header'
+import { TagEditor } from '@/components/tag-editor'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -213,15 +214,12 @@ function Inspector({ node, navigate }: { node: TreeNode; navigate: Navigate }) {
       ) : (
         <p className="text-sm text-muted-foreground">{description}</p>
       )}
-      {asset?.tags.length ? (
-        <div className="flex flex-wrap gap-1.5">
-          {asset.tags.map((tag) => (
-            <Badge key={tag} variant="outline">
-              {tag}
-            </Badge>
-          ))}
-        </div>
-      ) : null}
+      {/* Folders and services are tagged the same way; only an asset has snapshot tags to start from. */}
+      <TagEditor
+        label={node.label}
+        tags={edits.tagsFor(node.id, asset?.tags)}
+        onChange={(next) => edits.setTags(node.id, next)}
+      />
 
       <div className="flex flex-wrap gap-2">
         {service ? (
@@ -280,6 +278,7 @@ function Inspector({ node, navigate }: { node: TreeNode; navigate: Navigate }) {
                     <TableHead>Nullable</TableHead>
                     <TableHead>Constraint</TableHead>
                     <TableHead>Description</TableHead>
+                    <TableHead>Tags</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -295,6 +294,13 @@ function Inspector({ node, navigate }: { node: TreeNode; navigate: Navigate }) {
                           value={edits.columnDescription(asset.id, col.name, col.note ?? '')}
                           placeholder="Add description"
                           onSave={(value) => edits.setColumnDescription(asset.id, col.name, value)}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <TagEditor
+                          label={`column ${col.name}`}
+                          tags={edits.columnTagsFor(asset.id, col.name)}
+                          onChange={(next) => edits.setColumnTags(asset.id, col.name, next)}
                         />
                       </TableCell>
                     </TableRow>

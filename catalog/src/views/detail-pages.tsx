@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { LineageCanvas } from '@/components/lineage/lineage-canvas'
 import { PageHeader } from '@/components/page-header'
+import { TagEditor } from '@/components/tag-editor'
 import { ServiceIcon } from '@/lib/aiven-service-icons/ServiceIcon'
 import { ICON_SIZES } from '@/lib/aiven-service-icons/icons.js'
 import {
@@ -20,6 +21,7 @@ import {
   stacksForService,
   typeLabel,
 } from '@/lib/catalog'
+import { useCatalogEdits } from '@/lib/catalog-edits'
 import { changesForService, fetchLiveChanges } from '@/lib/context-log'
 import { eventsForService, factsForService } from '@/lib/operations'
 import { buildDatasetGraph, buildServiceGraph } from '@/lib/lineage-graph'
@@ -354,6 +356,7 @@ function SafetyPanel({ service }: { service: Service }) {
 
 export function ServiceDetailPage({ id, navigate }: { id: string; navigate: Navigate }) {
   const [tab, setTab] = useState('overview')
+  const edits = useCatalogEdits()
   const service = serviceById(id)
   if (!service) return null
   const stacks = stacksForService(id)
@@ -388,6 +391,13 @@ export function ServiceDetailPage({ id, navigate }: { id: string; navigate: Navi
             <p className="text-sm text-muted-foreground">{service.notes ?? service.role}</p>
           </div>
         </div>
+        {/* Keyed by service id, which is also this service's id in the catalog tree, so the tags
+            put on it here are the same ones the tree's inspector shows. */}
+        <TagEditor
+          label={service.name}
+          tags={edits.tagsFor(service.id)}
+          onChange={(next) => edits.setTags(service.id, next)}
+        />
         {stacks.length ? (
           <div className="flex flex-wrap gap-1.5">
             {stacks.map((stack) => (

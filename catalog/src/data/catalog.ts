@@ -260,6 +260,7 @@ const marmotCoreTables = [
       { name: 'description', type: 'text', nullable: true, note: 'What the product offers and to whom' },
       { name: 'metadata', type: 'jsonb', nullable: false, note: 'Ownership and any other free-form fields' },
       { name: 'tags', type: 'text[]', nullable: false, note: 'Free-form labels' },
+      { name: 'created_by', type: 'uuid', nullable: true, constraint: 'FK' as const, note: 'Who registered the product; null once that user is deleted' },
       { name: 'membership_count', type: 'integer', nullable: false, note: 'Assets in the product, denormalised for listing' },
     ],
   },
@@ -275,6 +276,150 @@ const marmotCoreTables = [
     ],
   },
 ]
+
+/**
+ * Marmot's relational core, read from the live service's own `pg_constraint` rather than guessed:
+ * 44 of its tables are joined by 61 foreign keys. Key columns only. The schema has 363 columns and
+ * documents 8 of them, so expanding all of them would mean inventing 355 descriptions for a tool we
+ * do not own, and invented descriptions are worse than an honest gap. Each table's own description
+ * says how many columns it really has.
+ *
+ * Format per column: `name:type:PK|FK|UQ|-:required(r)|nullable(n)`. Notes are derived from the
+ * constraints below, so the text cannot drift from the keys it describes.
+ */
+const marmotRelational: Record<string, [columns: number, keys: string]> = {
+  agent_runs: [12, 'id:uuid:PK:r, agent_id:varchar(255):FK:r'],
+  agent_tool_calls: [7, 'run_pk:uuid:PK:r, ordinal:integer:PK:r'],
+  api_keys: [7, 'id:uuid:PK:r, user_id:uuid:FK:r, name:varchar(255):UQ:r'],
+  asset_owners: [5, 'id:uuid:PK:r, asset_id:varchar(255):FK:r, user_id:uuid:FK:n, team_id:uuid:FK:n'],
+  asset_rule_memberships: [3, 'asset_rule_id:uuid:PK:r, asset_id:varchar(255):PK:r'],
+  asset_rule_targets: [3, 'rule_id:uuid:PK:r, target_type:varchar(50):PK:r, target_value:text:PK:r'],
+  asset_rule_terms: [2, 'asset_rule_id:uuid:PK:r, glossary_term_id:uuid:PK:r'],
+  asset_rules: [19, 'id:uuid:PK:r, name:varchar(255):UQ:r, created_by:uuid:FK:n'],
+  asset_schedules: [4, 'asset_id:varchar(255):PK:r, schedule_id:uuid:PK:r'],
+  asset_subscriptions: [6, 'id:uuid:PK:r, asset_id:varchar(255):FK:r, user_id:uuid:FK:r'],
+  asset_terms: [5, 'asset_id:varchar(255):PK:r, glossary_term_id:uuid:PK:r, created_by:uuid:FK:n'],
+  data_product_memberships: [5, 'data_product_id:uuid:PK:r, asset_id:varchar(255):PK:r, rule_id:uuid:FK:n'],
+  data_product_owners: [5, 'id:uuid:PK:r, data_product_id:uuid:FK:r, user_id:uuid:FK:n, team_id:uuid:FK:n'],
+  data_product_rule_targets: [
+    4,
+    'rule_id:uuid:PK:r, data_product_id:uuid:FK:r, target_type:varchar(50):PK:r, target_value:text:PK:r',
+  ],
+  data_product_rules: [13, 'id:uuid:PK:r, data_product_id:uuid:FK:r, name:varchar(255):-:r'],
+  doc_images: [7, 'id:uuid:PK:r, page_id:uuid:FK:r'],
+  doc_pages: [12, 'id:uuid:PK:r, parent_id:uuid:FK:n, title:varchar(255):-:r, created_by:uuid:FK:n'],
+  glossary_term_owners: [5, 'id:uuid:PK:r, glossary_term_id:uuid:FK:r, user_id:uuid:FK:n, team_id:uuid:FK:n'],
+  ingestion_job_runs: [20, 'id:uuid:PK:r, schedule_id:uuid:FK:n, plugin_run_id:uuid:FK:n'],
+  ingestion_schedules: [12, 'id:uuid:PK:r, name:varchar(255):UQ:r'],
+  lineage_events: [4, 'event_id:uuid:PK:r'],
+  notifications: [11, 'id:uuid:PK:r, user_id:uuid:FK:r, title:varchar(255):-:r'],
+  permissions: [6, 'id:uuid:PK:r, name:varchar(255):UQ:r'],
+  product_images: [9, 'id:uuid:PK:r, data_product_id:uuid:FK:r, created_by:uuid:FK:n'],
+  role_permissions: [3, 'role_id:uuid:PK:r, permission_id:uuid:PK:r'],
+  roles: [7, 'id:uuid:PK:r, name:varchar(255):-:r'],
+  run_checkpoints: [7, 'id:uuid:PK:r, run_id:uuid:FK:r'],
+  run_entities: [8, 'id:uuid:PK:r, run_id:uuid:FK:r'],
+  run_history: [13, 'id:varchar(255):PK:r, asset_id:varchar(255):FK:r'],
+  runs: [11, 'id:uuid:PK:r'],
+  service_account_api_keys: [7, 'id:uuid:PK:r, service_account_id:uuid:FK:r, name:varchar(255):UQ:r'],
+  service_account_roles: [2, 'service_account_id:uuid:PK:r, role_id:uuid:PK:r'],
+  service_accounts: [8, 'id:uuid:PK:r, name:varchar(255):-:r, created_by:uuid:FK:n'],
+  sso_team_mappings: [7, 'id:uuid:PK:r, team_id:uuid:FK:r'],
+  team_members: [7, 'id:uuid:PK:r, team_id:uuid:FK:r, user_id:uuid:FK:r'],
+  team_webhooks: [11, 'id:uuid:PK:r, team_id:uuid:FK:r, name:varchar(255):-:r'],
+  teams: [11, 'id:uuid:PK:r, name:varchar(255):UQ:r, created_by:uuid:FK:n'],
+  user_identities: [8, 'id:uuid:PK:r, user_id:uuid:FK:r'],
+  user_roles: [3, 'user_id:uuid:PK:r, role_id:uuid:PK:r'],
+  users: [11, 'id:uuid:PK:r, name:varchar(255):-:r'],
+}
+
+/** Every foreign key in the schema, as `[table, column, referenced table, referenced column]`. */
+const marmotForeignKeys: [string, string, string, string][] = [
+  ['agent_runs', 'agent_id', 'assets', 'id'],
+  ['agent_tool_calls', 'run_pk', 'agent_runs', 'id'],
+  ['api_keys', 'user_id', 'users', 'id'],
+  ['asset_owners', 'asset_id', 'assets', 'id'],
+  ['asset_owners', 'team_id', 'teams', 'id'],
+  ['asset_owners', 'user_id', 'users', 'id'],
+  ['asset_rule_memberships', 'asset_id', 'assets', 'id'],
+  ['asset_rule_memberships', 'asset_rule_id', 'asset_rules', 'id'],
+  ['asset_rule_targets', 'rule_id', 'asset_rules', 'id'],
+  ['asset_rule_terms', 'asset_rule_id', 'asset_rules', 'id'],
+  ['asset_rule_terms', 'glossary_term_id', 'glossary_terms', 'id'],
+  ['asset_rules', 'created_by', 'users', 'id'],
+  ['asset_schedules', 'asset_id', 'assets', 'id'],
+  ['asset_schedules', 'schedule_id', 'ingestion_schedules', 'id'],
+  ['asset_subscriptions', 'asset_id', 'assets', 'id'],
+  ['asset_subscriptions', 'user_id', 'users', 'id'],
+  ['asset_terms', 'asset_id', 'assets', 'id'],
+  ['asset_terms', 'created_by', 'users', 'id'],
+  ['asset_terms', 'glossary_term_id', 'glossary_terms', 'id'],
+  ['data_product_memberships', 'asset_id', 'assets', 'id'],
+  ['data_product_memberships', 'data_product_id', 'data_products', 'id'],
+  ['data_product_memberships', 'rule_id', 'data_product_rules', 'id'],
+  ['data_product_owners', 'data_product_id', 'data_products', 'id'],
+  ['data_product_owners', 'team_id', 'teams', 'id'],
+  ['data_product_owners', 'user_id', 'users', 'id'],
+  ['data_product_rule_targets', 'data_product_id', 'data_products', 'id'],
+  ['data_product_rule_targets', 'rule_id', 'data_product_rules', 'id'],
+  ['data_product_rules', 'data_product_id', 'data_products', 'id'],
+  ['data_products', 'created_by', 'users', 'id'],
+  ['doc_images', 'page_id', 'doc_pages', 'id'],
+  ['doc_pages', 'created_by', 'users', 'id'],
+  ['doc_pages', 'parent_id', 'doc_pages', 'id'],
+  ['glossary_term_owners', 'glossary_term_id', 'glossary_terms', 'id'],
+  ['glossary_term_owners', 'team_id', 'teams', 'id'],
+  ['glossary_term_owners', 'user_id', 'users', 'id'],
+  ['glossary_terms', 'parent_term_id', 'glossary_terms', 'id'],
+  ['ingestion_job_runs', 'plugin_run_id', 'runs', 'id'],
+  ['ingestion_job_runs', 'schedule_id', 'ingestion_schedules', 'id'],
+  ['lineage_edges', 'event_id', 'lineage_events', 'event_id'],
+  ['lineage_edges', 'source_mrn', 'assets', 'mrn'],
+  ['lineage_edges', 'target_mrn', 'assets', 'mrn'],
+  ['notifications', 'user_id', 'users', 'id'],
+  ['product_images', 'created_by', 'users', 'id'],
+  ['product_images', 'data_product_id', 'data_products', 'id'],
+  ['role_permissions', 'permission_id', 'permissions', 'id'],
+  ['role_permissions', 'role_id', 'roles', 'id'],
+  ['run_checkpoints', 'run_id', 'runs', 'id'],
+  ['run_entities', 'run_id', 'runs', 'id'],
+  ['run_history', 'asset_id', 'assets', 'id'],
+  ['service_account_api_keys', 'service_account_id', 'service_accounts', 'id'],
+  ['service_account_roles', 'role_id', 'roles', 'id'],
+  ['service_account_roles', 'service_account_id', 'service_accounts', 'id'],
+  ['service_accounts', 'created_by', 'users', 'id'],
+  ['sso_team_mappings', 'team_id', 'teams', 'id'],
+  ['team_members', 'team_id', 'teams', 'id'],
+  ['team_members', 'user_id', 'users', 'id'],
+  ['team_webhooks', 'team_id', 'teams', 'id'],
+  ['teams', 'created_by', 'users', 'id'],
+  ['user_identities', 'user_id', 'users', 'id'],
+  ['user_roles', 'role_id', 'roles', 'id'],
+  ['user_roles', 'user_id', 'users', 'id'],
+]
+
+/** What a key column is for, said in terms of the constraint it carries and nothing more. */
+function marmotColumns(table: string): Column[] {
+  const specs = marmotRelational[table][1].split(', ').map((spec) => spec.split(':'))
+  const composite = specs.filter(([, , role]) => role === 'PK').length > 1
+  return specs.map(([name, type, role, required]) => {
+    const references = marmotForeignKeys.find(([from, column]) => from === table && column === name)
+    const said = [
+      role === 'PK' ? (composite ? 'Part of the composite primary key' : 'Primary key') : '',
+      role === 'UQ' ? 'Unique' : '',
+      references ? `references ${references[2]}.${references[3]}` : '',
+      role === '-' && !references ? `The ${name} shown in Marmot` : '',
+    ].filter(Boolean)
+    return {
+      name,
+      type,
+      nullable: required === 'n',
+      constraint: role === '-' ? undefined : (role as 'PK' | 'FK' | 'UQ'),
+      // Capitalised once, at the front, so "Primary key, references users.id." reads as one sentence.
+      note: `${said.join(', ')}.`,
+    }
+  })
+}
 
 const marmotTableNames = [
   'agent_runs',
@@ -358,7 +503,7 @@ export const folderDescriptions: Record<string, string> = {
   'marmot-pg:defaultdb':
     "Aiven creates defaultdb with every PostgreSQL service. Here it carries Marmot's whole schema in public.",
   'marmot-pg:public':
-    'The Marmot catalog schema. Four tables are expanded in this snapshot — assets, lineage_edges, data_products and glossary_terms; the rest are listed by name only.',
+    'The Marmot catalog schema: 44 of its 57 tables are joined by 61 foreign keys, which the data model view draws. Four tables are expanded in full — assets, lineage_edges, data_products and glossary_terms; the rest keep their key columns, and the 13 tables with no keys are listed by name only.',
   'analytics-agent-pg:defaultdb':
     'Aiven creates defaultdb with every PostgreSQL service. Here it carries the analytics agent store in public.',
   'analytics-agent-pg:public':
@@ -464,7 +609,7 @@ export const catalog: CatalogSnapshot = {
     table('ch.service_kafka.products', 'products', 'clickhouse-2a6274d2', 'service_kafka-1b5cb1e7', 'ClickHouse Kafka engine table for product CDC.', chFromAvro(kafkaProducts), { kind: 'clickhouse_table', tags: ['cdc', 'avro'] }),
     table('ch.service_kafka.orders', 'orders', 'clickhouse-2a6274d2', 'service_kafka-1b5cb1e7', 'ClickHouse Kafka engine table for order CDC.', chFromAvro(kafkaOrders), { kind: 'clickhouse_table', tags: ['cdc', 'avro'] }),
     table('ch.service_kafka.order_items', 'order_items', 'clickhouse-2a6274d2', 'service_kafka-1b5cb1e7', 'ClickHouse Kafka engine table for order item CDC.', chFromAvro(kafkaOrderItems), { kind: 'clickhouse_table', tags: ['cdc', 'avro'] }),
-    table('ch.pg.marketing.campaigns', 'campaigns', 'clickhouse-2a6274d2', 'service_pg-37c7de3b.marketing', 'PostgreSQL engine over marketing.campaigns via clickhouse_postgresql.', pgCampaigns.map((c) => ({ ...c, note: c.note ?? 'Federated from PostgreSQL' })), { kind: 'clickhouse_table', rowCount: 16, tags: ['marketing', 'federated'] }),
+    table('ch.pg.marketing.campaigns', 'campaigns', 'clickhouse-2a6274d2', 'service_pg-37c7de3b.marketing', 'PostgreSQL engine over marketing.campaigns via clickhouse_postgresql.', pgCampaigns.map((c) => ({ ...c, note: c.note ?? 'Federated from PostgreSQL' })), { kind: 'clickhouse_table', rowCount: 16, tags: ['marketing', 'federation'] }),
 
     {
       id: 'trino.summit_pg',
@@ -568,7 +713,17 @@ export const catalog: CatalogSnapshot = {
       table(`marmot.${t.name}`, t.name, 'marmot-pg', 'public', t.description, t.columns, { tags: ['marmot'] }),
     ),
     ...marmotTableNames.map((name) =>
-      table(`marmot.${name}`, name, 'marmot-pg', 'public', `Marmot catalog table ${name}. Column list not expanded in this snapshot.`, [], { tags: ['marmot'] }),
+      marmotRelational[name]
+        ? table(
+            `marmot.${name}`,
+            name,
+            'marmot-pg',
+            'public',
+            `Marmot catalog table ${name}. ${marmotRelational[name][0]} columns in the database; the snapshot keeps its key columns, which are what the data model is drawn from.`,
+            marmotColumns(name),
+            { tags: ['marmot'] },
+          )
+        : table(`marmot.${name}`, name, 'marmot-pg', 'public', `Marmot catalog table ${name}. No keys and no column list in this snapshot: nothing references it and it references nothing.`, [], { tags: ['marmot'] }),
     ),
 
     {
@@ -717,6 +872,17 @@ export const catalog: CatalogSnapshot = {
       via: 'application_service_credential',
       confidence: 'dataset',
     },
+    // Marmot's own foreign keys, so its schema has a data model like any other database here.
+    ...marmotForeignKeys.map(([from, column, to, references]) => ({
+      id: `fk.marmot.${from}.${column}`,
+      kind: 'fk' as const,
+      sourceAssetId: `marmot.${from}`,
+      destAssetId: `marmot.${to}`,
+      sourceColumn: column,
+      destColumn: references,
+      via: 'PostgreSQL foreign key',
+      confidence: 'column' as const,
+    })),
     {
       id: 'fk.orders.customer_id',
       kind: 'fk',
