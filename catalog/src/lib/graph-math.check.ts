@@ -1,6 +1,6 @@
 // Self-check for graph maths. Run: node src/lib/graph-math.check.ts
 import assert from 'node:assert/strict'
-import { groupedLayout, neighborhood } from './graph-math.ts'
+import { groupedLayout, neighborhood, reachable } from './graph-math.ts'
 
 // a → b → c → d, plus a side branch b → e and a cycle d → b.
 const links = [
@@ -29,6 +29,32 @@ assert.deepEqual(at('x', Infinity), ['x', 'y'])
 
 // An id that is in no link at all is its own component, never a crash.
 assert.deepEqual(at('nope', Infinity), ['nope'])
+
+// --- reachable ---
+
+const down = (focus: string, depth: number) => [...reachable(links, focus, depth, 'forward')].sort()
+const up = (focus: string, depth: number) => [...reachable(links, focus, depth, 'backward')].sort()
+
+// Depth counts hops here too, and the focus is always included.
+assert.deepEqual(down('a', 0), ['a'])
+assert.deepEqual(down('a', 1), ['a', 'b'])
+assert.deepEqual(down('a', 2), ['a', 'b', 'c', 'e'], "both of b's targets are one hop from b")
+assert.deepEqual(down('a', 3), ['a', 'b', 'c', 'd', 'e'])
+
+// The point of this over neighborhood: direction is respected. Nothing feeds a, and c is not
+// downstream of d even though they are adjacent.
+assert.deepEqual(up('a', Infinity), ['a'])
+assert.deepEqual(down('d', 1), ['b', 'd'], 'd → b only; c is upstream of d, not downstream')
+assert.deepEqual(up('c', 2), ['a', 'b', 'c', 'd'], 'c is fed by b, which is fed by a and d')
+
+// A hop that reaches nothing new leaves the set unchanged, which is how the asset page knows not
+// to offer another one.
+assert.deepEqual(down('e', 5), ['e'])
+assert.deepEqual(down('a', 4), down('a', Infinity), 'the cycle terminates rather than growing')
+
+// Unrelated components stay out, and an unknown id is its own answer rather than a crash.
+assert.ok(!down('a', Infinity).includes('y'))
+assert.deepEqual(up('nope', Infinity), ['nope'])
 
 // --- groupedLayout ---
 

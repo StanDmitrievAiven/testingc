@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { PencilIcon } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { ArrowLeftIcon, ArrowRightIcon, PencilIcon } from 'lucide-react'
 import { LineageCanvas } from '@/components/lineage/lineage-canvas'
 import { PageHeader } from '@/components/page-header'
 import { Badge } from '@/components/ui/badge'
@@ -14,9 +14,19 @@ import { catalog } from '@/data/catalog'
 import { ServiceIcon } from '@/lib/aiven-service-icons/ServiceIcon'
 import { ICON_SIZES } from '@/lib/aiven-service-icons/icons.js'
 import { useCatalogEdits } from '@/lib/catalog-edits'
-import { buildDatasetGraph } from '@/lib/lineage-graph'
-import type { Asset, LineageEdge } from '@/types'
+import { ASSET_HANDLE, buildModelGraph, buildSchemaGraph } from '@/lib/lineage-graph'
 import {
+  formatBytes,
+  formatMs,
+  lagOf,
+  operationsCapturedAt,
+  shareOfQueryTime,
+  topicHealthFor,
+  workloadFor,
+} from '@/lib/operations'
+import type { Asset, QueryStat, TopicHealth } from '@/types'
+import {
+  assetsUnder,
   findTreeNode,
   formatCount,
   isRuntime,
@@ -119,19 +129,32 @@ function Inspector({ node, navigate }: { node: TreeNode; navigate: Navigate }) {
   const connected = hops.up.length + hops.down.length
   const stacks = stacksForService(node.serviceId)
   const edits = useCatalogEdits()
+  // A folder describes itself now; only a service node still speaks for its service.
   const description = asset
     ? edits.assetDescription(asset.id, asset.description)
-    : (service?.notes ?? service?.role ?? 'Folder in the project catalog.')
+    : (node.description ?? service?.notes ?? service?.role ?? 'Folder in the project catalog.')
+
+  // Both are captured per resource, so a table with no recorded statements and every non-topic
+  // simply never offers the tab.
+  const workload = asset ? workloadFor(asset.serviceId, asset.name) : []
+  const health = asset ? topicHealthFor(asset.id) : undefined
+
+  // Relational folders only: the builder returns nothing when no foreign key joins these tables,
+  // which is most of them here — topics, engine tables and append-only logs have no model to draw.
+  const model = useMemo(() => (asset ? null : buildModelGraph(assetsUnder(node))), [asset, node])
 
   const tabs = asset
     ? [
         { value: 'overview', label: 'Overview' },
         { value: 'columns', label: `Columns · ${asset.columns.length}` },
         { value: 'lineage', label: `Lineage · ${connected}` },
+        ...(workload.length ? [{ value: 'workload', label: `Workload · ${workload.length}` }] : []),
+        ...(health ? [{ value: 'delivery', label: 'Delivery' }] : []),
       ]
     : [
         { value: 'overview', label: 'Overview' },
         { value: 'contains', label: `Contains · ${node.children?.length ?? 0}` },
+        ...(model?.edges.length ? [{ value: 'model', label: 'Data model' }] : []),
       ]
   // The inspector stays mounted while you browse the tree, so the open tab can outlive the node
   // that offered it.
@@ -286,7 +309,21 @@ function Inspector({ node, navigate }: { node: TreeNode; navigate: Navigate }) {
 
         {asset ? (
           <TabsContent value="lineage" className="pt-4">
-            {active === 'lineage' ? <AssetLineage asset={asset} hops={hops} navigate={navigate} /> : null}
+            {/* Keyed by asset so walking to a neighbour starts from its own neighbourhood again
+                rather than inheriting however far the last one was expanded. */}
+            {active === 'lineage' ? <AssetLineage key={asset.id} asset={asset} navigate={navigate} /> : null}
+          </TabsContent>
+        ) : null}
+
+        {workload.length ? (
+          <TabsContent value="workload" className="pt-4">
+            <WorkloadPanel stats={workload} />
+          </TabsContent>
+        ) : null}
+
+        {health ? (
+          <TabsContent value="delivery" className="pt-4">
+            <DeliveryPanel health={health} />
           </TabsContent>
         ) : null}
 
@@ -339,38 +376,197 @@ function Inspector({ node, navigate }: { node: TreeNode; navigate: Navigate }) {
             )}
           </TabsContent>
         ) : null}
+
+        {model?.edges.length ? (
+          <TabsContent value="model" className="pt-4">
+            <div className="flex flex-col gap-2">
+              <p className="text-sm text-muted-foreground">
+                {model.nodes.length} related {model.nodes.length === 1 ? 'table' : 'tables'} joined by{' '}
+                {model.edges.length} foreign {model.edges.length === 1 ? 'key' : 'keys'}. Tables with no
+                relationships are under Contains. Drag to rearrange, fold a column list with its chevron, or
+                click a table to open it.
+              </p>
+              <div className="h-[520px]">
+                <LineageCanvas
+                  graphKey={`model-${node.id}`}
+                  nodes={model.nodes}
+                  edges={model.edges}
+                  onSelect={(entity) => navigate({ page: 'catalog', assetId: entity.entityId })}
+                />
+              </div>
+            </div>
+          </TabsContent>
+        ) : null}
       </Tabs>
     </div>
   )
 }
 
-function AssetLineage({
-  asset,
-  hops,
-  navigate,
-}: {
-  asset: Asset
-  hops: { up: LineageEdge[]; down: LineageEdge[] }
-  navigate: Navigate
-}) {
-  // buildDatasetGraph drops assets that have no lineage, and an unmatched focus id falls back to
-  // the whole project graph — so an asset with no hops must never reach the canvas.
-  if (!hops.up.length && !hops.down.length) {
+function WorkloadPanel({ stats }: { stats: QueryStat[] }) {
+  const heaviest = stats[0]
+  const share = shareOfQueryTime(heaviest)
+
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="text-sm text-muted-foreground">
+        What actually runs against this table, from <code className="font-mono text-xs">pg_stat_statements</code>,
+        cumulative since the counters were last reset. The heaviest statement has taken{' '}
+        <span className="font-medium text-foreground">{formatMs(heaviest.totalMs)}</span> of database time, which is{' '}
+        {(share * 100).toFixed(1)}% of everything this service has run.
+      </p>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Statement</TableHead>
+            <TableHead className="text-right">Calls</TableHead>
+            <TableHead className="text-right">Mean</TableHead>
+            <TableHead className="text-right">Slowest</TableHead>
+            <TableHead className="text-right">Total</TableHead>
+            <TableHead className="text-right">Share</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {stats.map((stat) => {
+            const stake = shareOfQueryTime(stat)
+            return (
+              <TableRow key={stat.id}>
+                <TableCell>
+                  <pre className="max-w-[46ch] whitespace-pre-wrap font-mono text-xs">{stat.sql}</pre>
+                </TableCell>
+                <TableCell className="text-right">{formatCount(stat.calls)}</TableCell>
+                {/* A statement averaging over 100ms is the one worth looking at first. */}
+                    <TableCell className={cn('text-right', stat.meanMs > 100 && 'font-medium text-warning')}>
+                  {formatMs(stat.meanMs)}
+                </TableCell>
+                <TableCell className="text-right text-muted-foreground">{formatMs(stat.maxMs)}</TableCell>
+                <TableCell className="text-right">{formatMs(stat.totalMs)}</TableCell>
+                <TableCell className="text-right">
+                  {stake < 0.001 ? '<0.1%' : `${(stake * 100).toFixed(1)}%`}
+                </TableCell>
+              </TableRow>
+            )
+          })}
+        </TableBody>
+      </Table>
+    </div>
+  )
+}
+
+function DeliveryPanel({ health }: { health: TopicHealth }) {
+  const { lag, retained, bytes } = lagOf(health)
+
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="text-sm text-muted-foreground">
+        Consumer group <code className="font-mono text-xs">{health.consumerGroup}</code>{' '}
+        {lag === 0 ? (
+          <span className="font-medium text-foreground">is level with the log</span>
+        ) : (
+          <span className="font-medium text-foreground">is {formatCount(lag)} messages behind</span>
+        )}
+        . Retention is {health.retentionHours} hours, so about {formatCount(retained)} messages ({formatBytes(bytes)})
+        can still be replayed — anything older has already been deleted.
+      </p>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Partition</TableHead>
+            <TableHead className="text-right">Earliest</TableHead>
+            <TableHead className="text-right">Latest</TableHead>
+            <TableHead className="text-right">Consumer at</TableHead>
+            <TableHead className="text-right">Lag</TableHead>
+            <TableHead className="text-right">Size</TableHead>
+            <TableHead className="text-right">In sync</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {health.partitions.map((partition) => (
+            <TableRow key={partition.partition}>
+              <TableCell className="font-medium">{partition.partition}</TableCell>
+              <TableCell className="text-right text-muted-foreground">
+                {partition.earliestOffset.toLocaleString()}
+              </TableCell>
+              <TableCell className="text-right">{partition.latestOffset.toLocaleString()}</TableCell>
+              <TableCell className="text-right">{partition.consumerOffset.toLocaleString()}</TableCell>
+              <TableCell className="text-right">{partition.latestOffset - partition.consumerOffset}</TableCell>
+              <TableCell className="text-right text-muted-foreground">{formatBytes(partition.sizeBytes)}</TableCell>
+              <TableCell className="text-right">
+                {partition.isr}/{health.replication}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+      <p className="text-xs text-muted-foreground">
+        Replication {health.replication} with min in-sync replicas {health.minInsyncReplicas}. Offsets move
+        constantly; these were read at {new Date(operationsCapturedAt).toLocaleString()}.
+      </p>
+    </div>
+  )
+}
+
+function AssetLineage({ asset, navigate }: { asset: Asset; navigate: Navigate }) {
+  // Hops followed in each direction, drawn column to column. One hop is the direct neighbourhood,
+  // which is all most assets have; the webshop pipeline runs app to Postgres to topic to
+  // ClickHouse, so the buttons below open it up a hop at a time in whichever direction has more.
+  const [depth, setDepth] = useState({ up: 1, down: 1 })
+  const graph = buildSchemaGraph(asset.id, depth)
+
+  if (!graph.edges.length) {
     return <p className="text-sm text-muted-foreground">No lineage recorded for this asset.</p>
   }
-  // One hop keeps the embedded canvas readable, and clicking a node re-centres the graph on it, so
-  // the neighbourhood is walked a hop at a time. The lineage page is there for the whole picture.
-  const graph = buildDatasetGraph(undefined, { focusId: asset.id, depth: 1 })
+
+  // The count beside the tab is a count of links, so the sentence has to say which kind they are,
+  // or 11 links between two datasets reads as 11 missing nodes.
+  const perColumn = graph.edges.filter((edge) => edge.sourceHandle !== ASSET_HANDLE).length
+  const perDataset = graph.edges.length - perColumn
+  const others = graph.nodes.length - 1
+  const expanded = depth.up > 1 || depth.down > 1
 
   return (
     <div className="flex flex-col gap-2">
       <p className="text-sm text-muted-foreground">
-        {hops.up.length} upstream · {hops.down.length} downstream. Direct neighbours of {asset.name} — drag to
-        rearrange, click a node to walk to it.
+        {perColumn ? `${perColumn} column-level ${perColumn === 1 ? 'link' : 'links'}` : 'No column-level links'}
+        {perDataset ? ` and ${perDataset} recorded only at dataset level` : ''}, across {others}{' '}
+        {others === 1 ? 'other dataset' : 'other datasets'}
+        {expanded ? `, ${depth.up} up and ${depth.down} down from ${asset.name}` : ''}. Drag to
+        rearrange, fold a column list with its chevron, or click a node to walk to it.
       </p>
-      <div className="h-[400px]">
+
+      {/* Only offered while there is something left to reach, so an exhausted direction says so by
+          having no button rather than by redrawing the same graph. */}
+      <div className="flex flex-wrap gap-2">
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={!graph.moreUpstream}
+          onClick={() => setDepth((was) => ({ ...was, up: was.up + 1 }))}
+        >
+          <ArrowLeftIcon />
+          {graph.moreUpstream ? 'Further upstream' : 'No more upstream'}
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={!graph.moreDownstream}
+          onClick={() => setDepth((was) => ({ ...was, down: was.down + 1 }))}
+        >
+          {graph.moreDownstream ? 'Further downstream' : 'No more downstream'}
+          <ArrowRightIcon />
+        </Button>
+        {expanded ? (
+          <Button size="sm" variant="ghost" onClick={() => setDepth({ up: 1, down: 1 })}>
+            Direct neighbours only
+          </Button>
+        ) : null}
+      </div>
+
+      {/* Taller once expanded: three hops of column lists do not read at the height two do. */}
+      <div className={expanded ? 'h-[620px]' : 'h-[460px]'}>
         <LineageCanvas
-          graphKey={`asset-${asset.id}`}
+          // Remounts on every depth change so the new nodes get laid out rather than piled at
+          // the origin. Drag positions are the cost, and re-laying out is the point of the click.
+          graphKey={`asset-${asset.id}-${depth.up}-${depth.down}`}
           nodes={graph.nodes}
           edges={graph.edges}
           onSelect={(entity) => navigate({ page: 'catalog', assetId: entity.entityId })}

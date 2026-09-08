@@ -7,8 +7,8 @@ import {
   serviceById,
   stackById,
 } from '@/lib/catalog'
-import { groupedLayout, layoutBoxes, neighborhood } from '@/lib/graph-math'
-import type { Asset, Integration, IntegrationType, LineageKind, Service } from '@/types'
+import { groupedLayout, layoutBoxes, neighborhood, reachable } from '@/lib/graph-math'
+import type { Asset, Column, Integration, IntegrationType, LineageEdge, LineageKind, Service } from '@/types'
 
 export type GraphLevel = 'services' | 'datasets' | 'columns'
 
@@ -112,6 +112,40 @@ export type EntityNodeData = {
 // Must match the fixed box EntityNode renders, or the layout will reserve the wrong space.
 const NODE_WIDTH = 228
 const NODE_HEIGHT = 56
+
+/**
+ * One dataset drawn as its column list, so a column-level edge can land on the column it actually
+ * describes. Every column keeps a handle on both sides — an edge whose handle is missing is
+ * silently dropped — but `into`/`outOf` say which of them an edge actually arrives at, so the
+ * other stays invisible instead of leaving a mark with no line attached.
+ */
+export type SchemaNodeData = {
+  label: string
+  subtitle: string
+  kind: string
+  markType?: string
+  entityId: string
+  /** The asset whose page this graph is embedded in, so it can be picked out of its neighbours. */
+  focused: boolean
+  /** Whether a dataset-level edge lands on the header, which is where those without a column go. */
+  assetInto: boolean
+  assetOutOf: boolean
+  columns: { name: string; type: string; constraint: Column['constraint']; into: boolean; outOf: boolean }[]
+}
+
+/** Handle id for edges with no column of their own, so they attach to the header instead. */
+export const ASSET_HANDLE = '__asset'
+
+// SchemaNode renders these exact sizes; keeping them here means the layout and the component
+// cannot drift apart. Height grows with the column list rather than being fixed.
+export const SCHEMA_WIDTH = 264
+export const SCHEMA_HEADER = 48
+export const SCHEMA_ROW = 24
+const SCHEMA_BODY_PADDING = 6
+
+export function schemaNodeHeight(columns: number): number {
+  return SCHEMA_HEADER + (columns ? columns * SCHEMA_ROW + SCHEMA_BODY_PADDING : 0)
+}
 
 function visualEnds(integration: Integration): { source: string; target: string } {
   if (integration.type === 'application_service_credential') {
@@ -344,6 +378,153 @@ export function buildDatasetGraph(stackId?: string, options?: GraphOptions): Gra
   }
 
   return finish(nodes, edges, options, Boolean(options?.hideIsolated) && !stackId)
+}
+
+export type SchemaGraph = {
+  nodes: Node<SchemaNodeData>[]
+  edges: Edge[]
+  /** Whether another hop in that direction would add anything, so the offer can be withheld. */
+  moreUpstream: boolean
+  moreDownstream: boolean
+}
+
+/**
+ * Draws a set of assets as column lists joined by the given lineage rows, and lays them out. Both
+ * the lineage neighbourhood and the schema's data model are this same picture over a different
+ * choice of assets and rows, so the handle wiring lives here once.
+ */
+function schemaPicture(
+  assets: Asset[],
+  rows: LineageEdge[],
+  focusId?: string,
+): { nodes: Node<SchemaNodeData>[]; edges: Edge[] } {
+  // A recorded column the asset's own column list does not contain would reference a handle that
+  // never renders, and React Flow silently drops such an edge. Falling back to the header keeps
+  // the link visible instead.
+  const handleFor = (asset: string, column: string | undefined) =>
+    column && assetById(asset)?.columns.some((item) => item.name === column) ? column : ASSET_HANDLE
+
+  const edges = rows.map((row) =>
+    styledEdge(lineageFlow[row.kind], {
+      id: row.id,
+      source: row.sourceAssetId,
+      target: row.destAssetId,
+      sourceHandle: handleFor(row.sourceAssetId, row.sourceColumn),
+      targetHandle: handleFor(row.destAssetId, row.destColumn),
+      animated: row.confidence === 'column',
+    }),
+  )
+
+  // Taken from the built edges rather than the raw lineage, so the header fallback above is
+  // reflected too and no handle is drawn without a line arriving at it.
+  const arrivesAt = new Set(edges.map((edge) => `${edge.target}.${edge.targetHandle}`))
+  const leavesFrom = new Set(edges.map((edge) => `${edge.source}.${edge.sourceHandle}`))
+
+  const nodes: Node<SchemaNodeData>[] = assets.map((asset) => ({
+    id: asset.id,
+    type: 'schema',
+    position: { x: 0, y: 0 },
+    data: {
+      label: asset.name,
+      subtitle: `${asset.kind} · ${asset.serviceId}`,
+      kind: asset.kind,
+      markType: serviceById(asset.serviceId)?.type,
+      entityId: asset.id,
+      focused: asset.id === focusId,
+      assetInto: arrivesAt.has(`${asset.id}.${ASSET_HANDLE}`),
+      assetOutOf: leavesFrom.has(`${asset.id}.${ASSET_HANDLE}`),
+      columns: asset.columns.map((column) => ({
+        name: column.name,
+        type: column.type,
+        constraint: column.constraint,
+        into: arrivesAt.has(`${asset.id}.${column.name}`),
+        outOf: leavesFrom.has(`${asset.id}.${column.name}`),
+      })),
+    },
+  }))
+
+  const placed = layoutBoxes(
+    nodes.map((node) => ({
+      id: node.id,
+      width: SCHEMA_WIDTH,
+      height: schemaNodeHeight(node.data.columns.length),
+    })),
+    edges,
+    { nodesep: 28, ranksep: 140 },
+  )
+
+  return {
+    nodes: nodes.map((node) => {
+      const spot = placed.get(node.id)
+      return { ...node, position: { x: spot?.x ?? 0, y: spot?.y ?? 0 } }
+    }),
+    edges,
+  }
+}
+
+/**
+ * The tables of one schema joined by their foreign keys: the relational model, as opposed to the
+ * pipeline the lineage view walks. Returns nothing when no foreign key touches these assets, which
+ * is how the page knows not to offer the view — most schemas here are topics, engine tables or
+ * append-only logs with no relationships to draw.
+ */
+export function buildModelGraph(assets: Asset[]): { nodes: Node<SchemaNodeData>[]; edges: Edge[] } {
+  const ids = new Set(assets.map((asset) => asset.id))
+  const keys = catalog.lineage.filter(
+    (row) => row.kind === 'fk' && (ids.has(row.sourceAssetId) || ids.has(row.destAssetId)),
+  )
+  if (!keys.length) return { nodes: [], edges: [] }
+
+  // A key pointing out of the schema brings its target in: half a relationship is not a model.
+  const outside = keys
+    .flatMap((row) => [row.sourceAssetId, row.destAssetId])
+    .filter((id) => !ids.has(id))
+    .map(assetById)
+    .filter((asset): asset is Asset => Boolean(asset))
+
+  // Only the tables that take part. A schema's unrelated tables are already listed under Contains,
+  // and drawing them here as detached boxes would say less than the list does.
+  const related = new Set(keys.flatMap((row) => [row.sourceAssetId, row.destAssetId]))
+  return schemaPicture([...assets, ...outside].filter((asset) => related.has(asset.id)), keys)
+}
+
+/**
+ * The neighbourhood of one asset, drawn column to column. This is the honest picture for a
+ * pipeline whose lineage is recorded per column: buildDatasetGraph collapses the 11 links between a
+ * topic and its ClickHouse table into a single arrow, which then disagrees with the count beside it.
+ *
+ * Nodes are assets, not asset-columns, so a table appears once with its whole column list. Edges
+ * carry the column names as handle ids; anything recorded only at dataset level lands on the
+ * header handle instead.
+ *
+ * `up` and `down` are hops followed in each direction, defaulting to the direct neighbours.
+ */
+export function buildSchemaGraph(
+  assetId: string,
+  { up = 1, down = 1 }: { up?: number; down?: number } = {},
+): SchemaGraph {
+  const focus = assetById(assetId)
+  if (!focus) return { nodes: [], edges: [], moreUpstream: false, moreDownstream: false }
+
+  const links = catalog.lineage.map((edge) => ({ source: edge.sourceAssetId, target: edge.destAssetId }))
+  const upstream = reachable(links, assetId, up, 'backward')
+  const downstream = reachable(links, assetId, down, 'forward')
+  const ids = new Set([...upstream, ...downstream])
+
+  // Every edge between two included assets, not only those touching the focus: with more than one
+  // hop in view, the links among the neighbours are part of the same story.
+  const touching = catalog.lineage.filter(
+    (edge) => ids.has(edge.sourceAssetId) && ids.has(edge.destAssetId),
+  )
+  const assets = [...ids].map(assetById).filter((asset): asset is Asset => Boolean(asset))
+
+  // An unfollowed edge hanging off the boundary is what makes another hop worth offering. Measured
+  // against everything on screen, not just this direction's own set, so a hop that would only
+  // re-draw a dataset the other direction already reached is not offered.
+  const moreUpstream = links.some((link) => upstream.has(link.target) && !ids.has(link.source))
+  const moreDownstream = links.some((link) => downstream.has(link.source) && !ids.has(link.target))
+
+  return { ...schemaPicture(assets, touching, assetId), moreUpstream, moreDownstream }
 }
 
 export function buildColumnGraph(assetId: string, column: string, options?: GraphOptions): GraphResult {

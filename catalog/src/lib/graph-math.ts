@@ -5,6 +5,46 @@ type Link = { source: string; target: string }
 
 type Placed = { x: number; y: number; width: number; height: number }
 
+/**
+ * Node ids within `depth` hops of `focusId`, following links one way only: `forward` walks
+ * source to target, `backward` target to source. Where `neighborhood` answers "what is near
+ * this", this answers "what feeds it" or "what it feeds", which are separate questions when the
+ * links are a pipeline.
+ */
+export function reachable(
+  links: readonly Link[],
+  focusId: string,
+  depth: number,
+  direction: 'forward' | 'backward',
+): Set<string> {
+  const from = direction === 'forward' ? 'source' : 'target'
+  const to = direction === 'forward' ? 'target' : 'source'
+
+  const adjacency = new Map<string, string[]>()
+  for (const edge of links) {
+    const list = adjacency.get(edge[from])
+    if (list) list.push(edge[to])
+    else adjacency.set(edge[from], [edge[to]])
+  }
+
+  const reached = new Set([focusId])
+  let frontier = [focusId]
+  // Breadth-first so `depth` counts hops, and terminating on an empty frontier is what makes a
+  // cycle safe and `depth: Infinity` finite.
+  for (let hop = 0; hop < depth && frontier.length; hop += 1) {
+    const next: string[] = []
+    for (const id of frontier) {
+      for (const neighbor of adjacency.get(id) ?? []) {
+        if (reached.has(neighbor)) continue
+        reached.add(neighbor)
+        next.push(neighbor)
+      }
+    }
+    frontier = next
+  }
+  return reached
+}
+
 /** Node ids within `depth` hops of `focusId`, walking links in either direction. */
 export function neighborhood(links: readonly Link[], focusId: string, depth: number): Set<string> {
   const adjacency = new Map<string, string[]>()

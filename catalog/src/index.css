@@ -29,6 +29,7 @@
   --accent-foreground: #00807C;
   --destructive: #C62A2A;         /* Error 60 */
   --destructive-foreground: #FFFFFF;
+  --warning: #916000;             /* Warning 70 — caution, not failure */
   --border: #E1E1E1;              /* Grey 20 */
   --input: #B5B5B7;               /* Grey 30 */
   --ring: #2ED0CD;                /* Primary 30 */
@@ -71,6 +72,7 @@
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
+  --color-warning: var(--warning);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -113,6 +115,7 @@
   --accent-foreground: #EBEBEB;
   --destructive: #C62A2A;
   --destructive-foreground: #FFFFFF;
+  --warning: #FFDA85;             /* Warning 20 — the amber inverts to stay readable on dark */
   --border: #2D2E30;              /* Grey 70 */
   --input: #444547;               /* Grey 60 */
   --ring: #009693;                /* Primary 50 */

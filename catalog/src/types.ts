@@ -130,6 +130,83 @@ export interface ContextChange {
   clientName: string
 }
 
+/** One entry from Aiven's own project event log. `serviceId` matches `Service['id']`. */
+export interface ServiceEvent {
+  id: string
+  serviceId: string
+  at: string
+  /** An email for a person, or a platform name like `Aiven Automation`. */
+  actor: string
+  type: string
+  description: string
+}
+
+/**
+ * One `pg_stat_statements` row, attributed at capture time to the tables its SQL touches.
+ * `tables` holds `Asset['name']` values within the same service, since that is what a table page
+ * knows about itself. Times are milliseconds, cumulative since the stats were last reset.
+ */
+export interface QueryStat {
+  id: string
+  serviceId: string
+  tables: string[]
+  sql: string
+  calls: number
+  meanMs: number
+  maxMs: number
+  totalMs: number
+}
+
+export interface PartitionState {
+  partition: number
+  earliestOffset: number
+  latestOffset: number
+  /** How far the consumer group has read. Lag is `latestOffset - consumerOffset`. */
+  consumerOffset: number
+  sizeBytes: number
+  /** In-sync replicas. */
+  isr: number
+}
+
+/** Delivery state of one Kafka topic, keyed by the catalog asset it belongs to. */
+export interface TopicHealth {
+  assetId: string
+  consumerGroup: string
+  retentionHours: number
+  replication: number
+  minInsyncReplicas: number
+  partitions: PartitionState[]
+}
+
+/** A platform-initiated change Aiven has queued, with the date it stops being optional. */
+export interface PendingUpdate {
+  description: string
+  startAt: string
+  deadline: string
+}
+
+/**
+ * The operational facts that decide whether a service is safe to touch right now. Captured only
+ * for the services the prototype walks through; pages without an entry simply omit the panel.
+ */
+export interface ServiceFacts {
+  serviceId: string
+  planPriceUsdPerHour: number
+  /** A single node means a restart is downtime rather than a failover. */
+  nodeCount: number
+  maintenanceDay: string
+  maintenanceTime: string
+  terminationProtection: boolean
+  /** True when the ip_filter is `0.0.0.0/0` and public access is on. */
+  openToInternet: boolean
+  techEmails: string[]
+  diskMb: number
+  maxConnections?: number
+  latestBackupAt?: string
+  backupCount?: number
+  pendingUpdates: PendingUpdate[]
+}
+
 export interface CatalogSnapshot {
   project: string
   organization: string

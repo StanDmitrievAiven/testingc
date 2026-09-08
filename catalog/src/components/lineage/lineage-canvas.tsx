@@ -12,20 +12,26 @@ import {
   type Node,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import { EntityNode, ServiceGroupNode } from '@/components/lineage/entity-node'
-import type { EntityNodeData } from '@/lib/lineage-graph'
+import { EntityNode, SchemaNode, ServiceGroupNode } from '@/components/lineage/entity-node'
+import type { EntityNodeData, SchemaNodeData } from '@/lib/lineage-graph'
 import { cn } from '@/lib/utils'
 
-const nodeTypes = { entity: EntityNode, serviceGroup: ServiceGroupNode }
+const nodeTypes = { entity: EntityNode, serviceGroup: ServiceGroupNode, schema: SchemaNode }
 
-function Canvas({
+/**
+ * The canvas is generic over its node data so the entity and schema builders each keep their own
+ * shape; all it needs itself is the entityId it hands back on click.
+ */
+type CanvasNodeData = EntityNodeData | SchemaNodeData
+
+function Canvas<T extends CanvasNodeData>({
   nodes: laidOut,
   edges,
   onSelect,
 }: {
-  nodes: Node<EntityNodeData>[]
+  nodes: Node<T>[]
   edges: Edge[]
-  onSelect: (node: EntityNodeData) => void
+  onSelect: (node: T) => void
 }) {
   // A dragged node only moves if the change is fed back in, so positions live in local state.
   // The parent remounts this component whenever the graph itself changes (see `graphKey`), which
@@ -65,16 +71,16 @@ function Canvas({
   )
 }
 
-export function LineageCanvas({
+export function LineageCanvas<T extends CanvasNodeData>({
   nodes,
   edges,
   onSelect,
   className,
   graphKey,
 }: {
-  nodes: Node<EntityNodeData>[]
+  nodes: Node<T>[]
   edges: Edge[]
-  onSelect: (node: EntityNodeData) => void
+  onSelect: (node: T) => void
   className?: string
   graphKey?: string
 }) {

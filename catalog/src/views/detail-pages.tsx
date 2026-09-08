@@ -10,6 +10,7 @@ import { ServiceIcon } from '@/lib/aiven-service-icons/ServiceIcon'
 import { ICON_SIZES } from '@/lib/aiven-service-icons/icons.js'
 import {
   assetsForService,
+  blastRadius,
   formatCount,
   integrationsFor,
   isRuntime,
@@ -20,10 +21,11 @@ import {
   typeLabel,
 } from '@/lib/catalog'
 import { changesForService, fetchLiveChanges } from '@/lib/context-log'
+import { eventsForService, factsForService } from '@/lib/operations'
 import { buildDatasetGraph, buildServiceGraph } from '@/lib/lineage-graph'
 import type { Navigate } from '@/lib/routes'
 import { GitForkIcon } from 'lucide-react'
-import type { ContextChange, Service } from '@/types'
+import type { ContextChange, Service, ServiceEvent } from '@/types'
 
 function StateBadge({ state }: { state: Service['state'] }) {
   return <Badge variant={state === 'RUNNING' ? 'default' : 'outline'}>{state === 'RUNNING' ? 'Running' : 'Powered off'}</Badge>
@@ -156,6 +158,55 @@ function when(iso: string) {
   })
 }
 
+function PurposeRow({ change }: { change: ContextChange }) {
+  return (
+    <div className="flex flex-col gap-1 border-l-2 pl-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge variant="secondary">Agent</Badge>
+        <span className="font-mono text-sm font-medium">v{change.version}</span>
+        <span className="text-sm">{change.operation}</span>
+        <Badge variant={statusVariant[change.status]}>{change.status}</Badge>
+        <span className="text-xs text-muted-foreground">
+          {when(change.createdAt)} · {change.toolName}
+          {change.durationMs == null ? '' : ` · ${change.durationMs}ms`} · {change.clientName}
+        </span>
+      </div>
+      <p className="text-sm">{change.purpose || '(no purpose recorded)'}</p>
+      {change.errorText ? <p className="text-xs text-destructive">{change.errorText}</p> : null}
+    </div>
+  )
+}
+
+const eventLabel: Record<string, string> = {
+  service_create: 'created',
+  service_delete: 'deleted',
+  service_update: 'updated',
+  service_master_promotion: 'master promotion',
+  service_maintenance_perform: 'maintenance applied',
+  service_integration_create: 'integration created',
+  service_integration_delete: 'integration deleted',
+}
+
+function EventRow({ event }: { event: ServiceEvent }) {
+  // Aiven names a person by email and itself by product name, which is the distinction that
+  // matters here: a platform actor means the change happened without anyone asking for it.
+  const automated = !event.actor.includes('@')
+  return (
+    <div className="flex flex-col gap-1 border-l-2 pl-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge variant={automated ? 'default' : 'outline'}>{automated ? 'Platform' : 'Person'}</Badge>
+        <span className="text-sm">
+          {eventLabel[event.type] ?? event.type.replace('service_', '').replaceAll('_', ' ')}
+        </span>
+        <span className="text-xs text-muted-foreground">
+          {when(event.at)} · {event.actor}
+        </span>
+      </div>
+      <p className="line-clamp-3 text-sm text-muted-foreground">{event.description}</p>
+    </div>
+  )
+}
+
 function ChangeTimeline({ serviceId }: { serviceId: string }) {
   const snapshot = changesForService(serviceId)
   // Tagged with the service it was fetched for, so switching services falls back to that service's
@@ -178,40 +229,126 @@ function ChangeTimeline({ serviceId }: { serviceId: string }) {
 
   const fresh = live?.serviceId === serviceId ? live.rows : null
   const changes = fresh ?? snapshot
+  const events = eventsForService(serviceId)
 
-  if (!changes.length) {
+  // Two sources answer two halves of "why is it like this": the proxy knows the purpose someone
+  // wrote, Aiven knows what actually happened. Interleaved by time, they read as one history.
+  const rows = [
+    ...changes.map((change) => ({ at: change.createdAt, key: `purpose-${change.id}`, change })),
+    ...events.map((event) => ({ at: event.at, key: event.id, event })),
+  ].sort((a, b) => b.at.localeCompare(a.at))
+
+  if (!rows.length) {
     return (
       <p className="text-sm text-muted-foreground">
-        No changes recorded for this service. Only mutations made through the local MCP proxy appear here.
+        Nothing recorded for this service, in either the local MCP proxy or Aiven's event log.
       </p>
     )
   }
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Badge variant="outline">{fresh ? 'Live' : 'Snapshot'}</Badge>
+      <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+        {/* The badge describes where the purpose rows came from, so it only appears when there are some. */}
+        {changes.length ? <Badge variant="outline">{fresh ? 'Live proxy' : 'Snapshot'}</Badge> : null}
         <span>
-          {changes.length} recorded {changes.length === 1 ? 'change' : 'changes'}, newest first. Every one carries the
-          purpose its author had to write before the call went through.
+          {[
+            changes.length
+              ? `${changes.length} agent ${changes.length === 1 ? 'change' : 'changes'} carrying a written purpose`
+              : null,
+            events.length ? `${events.length} ${events.length === 1 ? 'event' : 'events'} Aiven recorded itself` : null,
+          ]
+            .filter(Boolean)
+            .join(', and ')}
+          , newest first.
         </span>
       </div>
-      {changes.map((change) => (
-        <div key={change.id} className="flex flex-col gap-1 border-l-2 pl-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="font-mono text-sm font-medium">v{change.version}</span>
-            <Badge variant="secondary">{change.operation}</Badge>
-            <Badge variant={statusVariant[change.status]}>{change.status}</Badge>
-            <span className="text-xs text-muted-foreground">
-              {when(change.createdAt)} · {change.toolName}
-              {change.durationMs == null ? '' : ` · ${change.durationMs}ms`} · {change.clientName}
-            </span>
-          </div>
-          <p className="text-sm">{change.purpose || '(no purpose recorded)'}</p>
-          {change.errorText ? <p className="text-xs text-destructive">{change.errorText}</p> : null}
-        </div>
-      ))}
+      {rows.map((row) =>
+        'change' in row ? <PurposeRow key={row.key} change={row.change} /> : <EventRow key={row.key} event={row.event} />,
+      )}
     </div>
+  )
+}
+
+function SafetyPanel({ service }: { service: Service }) {
+  const facts = factsForService(service.id)
+  const radius = blastRadius(service.id)
+  const dependents = [
+    radius.downstreamAssets.length
+      ? `feeds ${radius.downstreamAssets.length} downstream ${radius.downstreamAssets.length === 1 ? 'dataset' : 'datasets'} in ${radius.downstreamServices.join(', ')}`
+      : null,
+    radius.credentialHolders.length
+      ? `hands credentials to ${radius.credentialHolders.join(', ')}`
+      : null,
+    radius.stacks.length ? `belongs to ${radius.stacks.join(' and ')}` : null,
+  ].filter((line): line is string => line !== null)
+
+  if (!facts && !dependents.length) return null
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Before you change this</CardTitle>
+        <CardDescription>
+          {radius.datasets
+            ? `Holds ${radius.datasets} catalogued ${radius.datasets === 1 ? 'dataset' : 'datasets'}, and ${dependents.join('; ')}.`
+            : dependents.length
+              ? `This resource ${dependents.join('; ')}.`
+              : 'Nothing in the catalog depends on this resource.'}
+        </CardDescription>
+      </CardHeader>
+      {facts ? (
+        <CardContent className="flex flex-col gap-3">
+          <div className="flex flex-wrap gap-1.5">
+            {/* The flags that change what you should do next, rather than every field Aiven returns.
+                Red is reserved for danger you did not choose, like being reachable from anywhere;
+                a single node is a cost/redundancy tradeoff to be aware of, so it reads as caution. */}
+            <Badge variant={facts.nodeCount === 1 ? 'warning' : 'secondary'}>
+              {facts.nodeCount === 1 ? 'Single node: a restart is downtime' : `${facts.nodeCount} nodes`}
+            </Badge>
+            {/* Milder still, so it stays out of both the warning and destructive palettes. */}
+            <Badge variant={facts.terminationProtection ? 'secondary' : 'outline'}>
+              {facts.terminationProtection ? 'Termination protected' : 'No termination protection'}
+            </Badge>
+            {facts.openToInternet ? <Badge variant="destructive">Reachable from 0.0.0.0/0</Badge> : null}
+          </div>
+          <div className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2 xl:grid-cols-4">
+            {[
+              ['Maintenance', `${facts.maintenanceDay} ${facts.maintenanceTime.slice(0, 5)} UTC`],
+              [
+                'Cost',
+                `$${facts.planPriceUsdPerHour.toFixed(3)}/h · ~$${Math.round(facts.planPriceUsdPerHour * 730)}/mo`,
+              ],
+              [
+                'Last backup',
+                facts.latestBackupAt ? `${when(facts.latestBackupAt)} · ${facts.backupCount} kept` : 'None taken',
+              ],
+              ['Contact', facts.techEmails.join(', ') || 'Nobody listed'],
+            ].map(([label, value]) => (
+              <div key={label} className="flex flex-col">
+                <span className="text-xs text-muted-foreground">{label}</span>
+                <span>{value}</span>
+              </div>
+            ))}
+          </div>
+          {facts.pendingUpdates.length ? (
+            <div className="flex flex-col gap-1.5 border-t pt-3">
+              <span className="text-sm font-medium">
+                {facts.pendingUpdates.length} pending platform {facts.pendingUpdates.length === 1 ? 'update' : 'updates'}
+              </span>
+              {facts.pendingUpdates.map((update) => (
+                <p key={update.description} className="text-sm text-muted-foreground">
+                  {update.description}{' '}
+                  <span className="text-xs">
+                    Starts {when(update.startAt)}, applied by {when(update.deadline)} whatever you do.
+                  </span>
+                </p>
+              ))}
+            </div>
+          ) : null}
+        </CardContent>
+      ) : null}
+    </Card>
   )
 }
 
@@ -270,7 +407,10 @@ export function ServiceDetailPage({ id, navigate }: { id: string; navigate: Navi
             <TabsTrigger value="changes">Changes</TabsTrigger>
           </TabsList>
           <TabsContent value="overview" className="pt-4">
-            <OverviewFields service={service} />
+            <div className="flex flex-col gap-4">
+              <OverviewFields service={service} />
+              <SafetyPanel service={service} />
+            </div>
           </TabsContent>
           <TabsContent value="datasets" className="pt-4">
             <AssetTable serviceId={id} navigate={navigate} />

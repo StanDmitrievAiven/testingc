@@ -1,4 +1,4 @@
-import { catalog } from '@/data/catalog'
+import { catalog, folderDescriptions } from '@/data/catalog'
 import type { Asset, LineageEdge, Service, Stack } from '@/types'
 
 export function isRuntime(service: Service): boolean {
@@ -41,6 +41,43 @@ export function integrationsFor(serviceId: string) {
   return catalog.integrations.filter(
     (i) => i.sourceServiceId === serviceId || i.destServiceId === serviceId,
   )
+}
+
+export interface BlastRadius {
+  datasets: number
+  downstreamAssets: string[]
+  downstreamServices: string[]
+  credentialHolders: string[]
+  stacks: string[]
+}
+
+/**
+ * What stops working if this service does. Every part is already in the snapshot: the datasets it
+ * holds, the datasets fed from them, the applications Aiven hands its credentials to, and the
+ * stacks it belongs to. Lineage is mostly column-level, so destinations are deduplicated.
+ */
+export function blastRadius(serviceId: string): BlastRadius {
+  const own = new Set(assetsForService(serviceId).map((asset) => asset.id))
+  const downstream = catalog.lineage.filter(
+    (edge) => own.has(edge.sourceAssetId) && !own.has(edge.destAssetId),
+  )
+  const destServices = downstream
+    .map((edge) => assetById(edge.destAssetId)?.serviceId)
+    .filter((id): id is string => Boolean(id) && id !== serviceId)
+
+  return {
+    datasets: own.size,
+    downstreamAssets: [...new Set(downstream.map((edge) => edge.destAssetId))],
+    downstreamServices: [...new Set(destServices)],
+    credentialHolders: [
+      ...new Set(
+        catalog.integrations
+          .filter((i) => i.sourceServiceId === serviceId && i.type === 'application_service_credential')
+          .map((i) => i.destServiceId),
+      ),
+    ],
+    stacks: stacksForService(serviceId).map((stack) => stack.name),
+  }
 }
 
 export function lineageForAsset(assetId: string): { up: LineageEdge[]; down: LineageEdge[] } {
@@ -134,8 +171,14 @@ export type TreeNode = {
   kind: 'service' | 'database' | 'schema' | 'asset'
   label: string
   serviceId: string
+  /** Only folders carry one: services and assets already describe themselves. */
+  description?: string
   asset?: Asset
   children?: TreeNode[]
+}
+
+export function folderDescription(id: string): string {
+  return folderDescriptions[id] ?? 'Folder in the project catalog.'
 }
 
 function groupBy<T>(items: T[], key: (item: T) => string): Map<string, T[]> {
@@ -179,11 +222,13 @@ export function catalogTree(services: Service[] = catalog.services): TreeNode[] 
           kind: 'database',
           label: 'defaultdb',
           serviceId: service.id,
+          description: folderDescription(`${service.id}:defaultdb`),
           children: [...groupBy(assets, (asset) => asset.schema ?? 'public')].map(([schema, items]) => ({
             id: `${service.id}:${schema}`,
             kind: 'schema',
             label: schema,
             serviceId: service.id,
+            description: folderDescription(`${service.id}:${schema}`),
             children: leaves(items),
           })),
         },
@@ -194,6 +239,7 @@ export function catalogTree(services: Service[] = catalog.services): TreeNode[] 
         kind: 'database',
         label: db,
         serviceId: service.id,
+        description: folderDescription(`${service.id}:${db}`),
         children: leaves(items),
       }))
     } else if (service.type === 'kafka') {
@@ -202,6 +248,7 @@ export function catalogTree(services: Service[] = catalog.services): TreeNode[] 
         kind: 'schema',
         label: ns,
         serviceId: service.id,
+        description: folderDescription(`${service.id}:${ns}`),
         children: leaves(items),
       }))
     } else {
@@ -217,6 +264,11 @@ export function findTreeNode(id: string, nodes = catalogTree()): TreeNode | unde
     const child = node.children && findTreeNode(id, node.children)
     if (child) return child
   }
+}
+
+/** Every asset below a node, so a database folder speaks for the schemas nested under it too. */
+export function assetsUnder(node: TreeNode): Asset[] {
+  return node.asset ? [node.asset] : (node.children ?? []).flatMap(assetsUnder)
 }
 
 export function treeAncestors(id: string, nodes = catalogTree(), trail: string[] = []): string[] {
