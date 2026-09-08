@@ -1,0 +1,202 @@
+{
+  "serviceId": "clickhouse-2a6274d2",
+  "name": "clickhouse-2a6274d2",
+  "type": "clickhouse",
+  "captured": {
+    "catalog": "2026-09-07T07:20:00Z",
+    "serviceFacts": "2026-09-07T07:20:00Z",
+    "metrics": "2026-09-08T10:55:00Z",
+    "connectors": "2026-09-08T10:58:00Z",
+    "purposeLog": "2026-09-04T12:05:41.806Z",
+    "policy": "authored, not captured"
+  },
+  "policy": {
+    "serviceId": "clickhouse-2a6274d2",
+    "allowed": [
+      "read metadata",
+      "read metrics"
+    ],
+    "needsApproval": [
+      "apply pending maintenance",
+      "restart",
+      "change plan"
+    ],
+    "forbidden": [
+      "delete the service",
+      "drop a table"
+    ],
+    "because": "Single node with three platform updates already queued against deadlines, so a restart here competes with maintenance Aiven will run anyway."
+  },
+  "freeze": {
+    "active": true,
+    "from": "2026-09-08T00:00:00Z",
+    "to": "2026-09-12T23:59:59Z",
+    "reason": "Data Innovation Summit. The project is on stage, so nothing changes unattended, however good the reason."
+  },
+  "contacts": [
+    {
+      "email": "ayesha.ahmad@aiven.io",
+      "why": "Last touched it: changed it 3 times in the event log"
+    },
+    {
+      "email": "stan.dmitriev@aiven.io",
+      "why": "Last touched it: changed it 2 times in the event log"
+    }
+  ],
+  "ownership": "Observed, not declared: Marmot's asset_owners and teams tables are empty, so these are the people Aiven lists as contacts and the people the event log shows changing this service.",
+  "findings": [
+    {
+      "kind": "open-to-internet",
+      "severity": "danger",
+      "title": "Reachable from 0.0.0.0/0",
+      "detail": "The ip filter allows every address, so the only thing between this service and the internet is its password.",
+      "source": "aiven_service_get",
+      "capturedAt": "2026-09-07T07:20:00Z",
+      "runbook": {
+        "forFinding": "open-to-internet",
+        "title": "Close the service to the open internet",
+        "steps": [
+          "List what actually connects: the integrations in this catalog plus any application using a service credential.",
+          "Collect the egress ranges those clients come from. A guess here locks out production.",
+          "Replace the ip_filter with that list using aiven_service_update, leaving 0.0.0.0/0 out.",
+          "Keep your own access in the list, or you lock yourself out along with everyone else."
+        ],
+        "whileItRuns": "Established connections survive. New connections from anything outside the list are refused immediately, which is the whole point and also the risk.",
+        "takes": "Seconds to apply.",
+        "rollback": "Reversible: put the previous filter back with the same call.",
+        "verify": "Connect from an allowed address, then from one that is not. The second attempt must fail, or the filter did not take."
+      }
+    },
+    {
+      "kind": "single-node",
+      "severity": "caution",
+      "title": "One node, so a restart is an outage",
+      "detail": "There is nothing to fail over to. Every restart, plan change and platform update is downtime that has to be timed rather than absorbed.",
+      "source": "aiven_service_get",
+      "capturedAt": "2026-09-07T07:20:00Z",
+      "runbook": {
+        "forFinding": "single-node",
+        "title": "Restart a service that has no second node",
+        "steps": [
+          "Treat this as planned downtime and announce it, because that is what it is.",
+          "Check no platform maintenance is already in flight for the same service.",
+          "Prefer the existing maintenance window over a restart of your own.",
+          "Restart, then watch the dependents rather than the service: it comes back before they do."
+        ],
+        "whileItRuns": "A total outage for the length of the restart. Change data capture stops and resumes from its replication slot; consumers downstream fall behind rather than lose data.",
+        "takes": "A few minutes, most of it the service coming back up.",
+        "rollback": "None. A restart cannot be undone, only waited out.",
+        "verify": "Service state RUNNING, the CDC connector back to RUNNING, and consumer lag falling across two readings rather than one."
+      }
+    },
+    {
+      "kind": "pending-maintenance",
+      "severity": "caution",
+      "title": "3 platform updates queued, the first due 2026-09-22",
+      "detail": "After each deadline Aiven applies the update itself. On a single node that is downtime at a time nobody chose. Earliest: Tiered storage zero copy improvements. Fixes a metadata leak in tiered storage.",
+      "source": "aiven_service_get",
+      "capturedAt": "2026-09-07T07:20:00Z",
+      "runbook": {
+        "forFinding": "pending-maintenance",
+        "title": "Apply platform maintenance before its deadline",
+        "steps": [
+          "Read the deadlines from aiven_service_get: after them, Aiven applies the update whether or not it suits you.",
+          "Pick a window before the earliest deadline and inside the service maintenance window.",
+          "Apply the updates there, oldest deadline first."
+        ],
+        "whileItRuns": "Rolling on a multi-node service, downtime on a single node. Either way it is the same interruption you would get by leaving it to the deadline, but at a time you chose.",
+        "takes": "Minutes per update, longer for a version upgrade.",
+        "rollback": "A version upgrade is one way. Plan for going forward, not back.",
+        "verify": "The pending update list is empty and the service reports the new version."
+      }
+    },
+    {
+      "kind": "cpu-spikes",
+      "severity": "info",
+      "title": "CPU spikes on an otherwise idle service",
+      "detail": "55% peak against a 8% average. That is work arriving in bursts, not a service running out of headroom, and it is not a reason to change the plan.",
+      "source": "aiven_service_metrics_fetch",
+      "capturedAt": "2026-09-08T10:55:00Z"
+    },
+    {
+      "kind": "no-termination-protection",
+      "severity": "info",
+      "title": "Termination protection is off",
+      "detail": "Nothing stands between a deletion call and this service, which is a cheap gap to close.",
+      "source": "aiven_service_get",
+      "capturedAt": "2026-09-07T07:20:00Z",
+      "runbook": {
+        "forFinding": "no-termination-protection",
+        "title": "Turn on termination protection",
+        "steps": [
+          "Set termination protection with aiven_service_update."
+        ],
+        "whileItRuns": "Nothing. It is a configuration flag, with no restart.",
+        "takes": "Seconds.",
+        "rollback": "Reversible with the same call, which is exactly why it is worth having on.",
+        "verify": "Read the service back and confirm the flag is set."
+      }
+    }
+  ],
+  "readings": [
+    {
+      "serviceId": "clickhouse-2a6274d2",
+      "metric": "disk_usage",
+      "series": "clickhouse-2a6274d2-5",
+      "min": 0.828,
+      "avg": 1.308,
+      "max": 1.643,
+      "latest": 1.503,
+      "from": "2026-09-01T10:55:00Z",
+      "to": "2026-09-08T10:55:00Z",
+      "staleHours": 0,
+      "trend": {
+        "perDay": 0.09642857142857142,
+        "windowDays": 7,
+        "daysToFull": 1021.4503703703705,
+        "includesInitialLoad": false
+      }
+    },
+    {
+      "serviceId": "clickhouse-2a6274d2",
+      "metric": "cpu_usage",
+      "series": "clickhouse-2a6274d2-5",
+      "min": 7.137,
+      "avg": 8.046,
+      "max": 55.418,
+      "latest": 8.527,
+      "from": "2026-09-01T10:55:00Z",
+      "to": "2026-09-08T10:55:00Z",
+      "staleHours": 0
+    },
+    {
+      "serviceId": "clickhouse-2a6274d2",
+      "metric": "mem_usage",
+      "series": "clickhouse-2a6274d2-5",
+      "min": 21.733,
+      "avg": 23.588,
+      "max": 29.514,
+      "latest": 25.077,
+      "from": "2026-09-01T10:55:00Z",
+      "to": "2026-09-08T10:55:00Z",
+      "staleHours": 0
+    }
+  ],
+  "dependents": {
+    "datasets": 5,
+    "downstreamAssets": [
+      "trino.summit_clickhouse"
+    ],
+    "downstreamServices": [
+      "trino-hub"
+    ],
+    "credentialHolders": [],
+    "stacks": [
+      "Webshop"
+    ]
+  },
+  "plan": {
+    "options": [],
+    "note": "No plan prices were captured for clickhouse, so a fix here cannot state its cost yet."
+  }
+}

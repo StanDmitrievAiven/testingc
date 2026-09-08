@@ -49,9 +49,11 @@ export default function App() {
             {route.page === 'applications' ? <ApplicationsPage navigate={navigate} /> : null}
             {route.page === 'stacks' ? <StacksPage navigate={navigate} /> : null}
             {route.page === 'service' || route.page === 'application' ? (
-              <ServiceDetailPage id={route.id} navigate={navigate} />
+              <ServiceDetailPage id={route.id} navigate={navigate} tab={route.tab} />
             ) : null}
-            {route.page === 'stack' ? <StackDetailPage id={route.id} navigate={navigate} /> : null}
+            {route.page === 'stack' ? (
+              <StackDetailPage id={route.id} navigate={navigate} tab={route.tab} />
+            ) : null}
             {route.page === 'catalog' ? <CatalogPage navigate={navigate} assetId={route.assetId} /> : null}
             {route.page === 'lineage' ? (
               <LineagePage

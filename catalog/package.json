@@ -8,6 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "context:import": "node scripts/import-context-log.mjs",
+    "context:emit": "node --experimental-strip-types scripts/emit-agent-context.ts",
+    "check": "for f in src/data/tags.check.ts src/lib/*.check.ts src/lib/aiven-service-icons/mark.check.ts; do node --experimental-strip-types \"$f\" || exit 1; done && node --experimental-strip-types scripts/emit-agent-context.ts --check",
     "preview": "vite preview"
   },
   "dependencies": {

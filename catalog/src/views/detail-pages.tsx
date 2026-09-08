@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { LineageCanvas } from '@/components/lineage/lineage-canvas'
 import { PageHeader } from '@/components/page-header'
+import { AgentContextPanel } from '@/components/agent-context-panel'
 import { TagEditor } from '@/components/tag-editor'
 import { ServiceIcon } from '@/lib/aiven-service-icons/ServiceIcon'
 import { ICON_SIZES } from '@/lib/aiven-service-icons/icons.js'
@@ -354,8 +355,18 @@ function SafetyPanel({ service }: { service: Service }) {
   )
 }
 
-export function ServiceDetailPage({ id, navigate }: { id: string; navigate: Navigate }) {
-  const [tab, setTab] = useState('overview')
+export function ServiceDetailPage({
+  id,
+  navigate,
+  tab: initial,
+}: {
+  id: string
+  navigate: Navigate
+  tab?: string
+}) {
+  // `Route` has carried a tab since the deep links went in, but nothing read it, so every shared
+  // link landed on Overview regardless.
+  const [tab, setTab] = useState(initial ?? 'overview')
   const edits = useCatalogEdits()
   const service = serviceById(id)
   if (!service) return null
@@ -415,6 +426,7 @@ export function ServiceDetailPage({ id, navigate }: { id: string; navigate: Navi
             <TabsTrigger value="integrations">Integrations</TabsTrigger>
             <TabsTrigger value="lineage">Lineage</TabsTrigger>
             <TabsTrigger value="changes">Changes</TabsTrigger>
+            <TabsTrigger value="agent">Agent context</TabsTrigger>
           </TabsList>
           <TabsContent value="overview" className="pt-4">
             <div className="flex flex-col gap-4">
@@ -443,14 +455,25 @@ export function ServiceDetailPage({ id, navigate }: { id: string; navigate: Navi
           <TabsContent value="changes" className="pt-4">
             {tab === 'changes' ? <ChangeTimeline serviceId={id} /> : null}
           </TabsContent>
+          <TabsContent value="agent" className="pt-4">
+            <AgentContextPanel serviceId={id} />
+          </TabsContent>
         </Tabs>
       </div>
     </>
   )
 }
 
-export function StackDetailPage({ id, navigate }: { id: string; navigate: Navigate }) {
-  const [tab, setTab] = useState('members')
+export function StackDetailPage({
+  id,
+  navigate,
+  tab: initial,
+}: {
+  id: string
+  navigate: Navigate
+  tab?: string
+}) {
+  const [tab, setTab] = useState(initial ?? 'members')
   const stack = stackById(id)
   if (!stack) return null
   const members = stackMembers(stack)

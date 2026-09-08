@@ -1,0 +1,54 @@
+{
+  "serviceId": "webshop-simulator",
+  "name": "webshop-simulator",
+  "type": "application",
+  "captured": {
+    "catalog": "2026-09-07T07:20:00Z",
+    "serviceFacts": "2026-09-07T07:20:00Z",
+    "metrics": "2026-09-08T10:55:00Z",
+    "connectors": "2026-09-08T10:58:00Z",
+    "purposeLog": "2026-09-04T12:05:41.806Z",
+    "policy": "authored, not captured"
+  },
+  "policy": {
+    "serviceId": "webshop-simulator",
+    "allowed": [
+      "read metadata"
+    ],
+    "needsApproval": [],
+    "forbidden": [
+      "everything else"
+    ],
+    "because": "No policy has been written for this service, so it is read-only until somebody writes one."
+  },
+  "freeze": {
+    "active": true,
+    "from": "2026-09-08T00:00:00Z",
+    "to": "2026-09-12T23:59:59Z",
+    "reason": "Data Innovation Summit. The project is on stage, so nothing changes unattended, however good the reason."
+  },
+  "contacts": [],
+  "ownership": "Observed, not declared: Marmot's asset_owners and teams tables are empty, so these are the people Aiven lists as contacts and the people the event log shows changing this service.",
+  "findings": [],
+  "readings": [],
+  "dependents": {
+    "datasets": 1,
+    "downstreamAssets": [
+      "pg.public.customers",
+      "pg.public.products",
+      "pg.public.orders",
+      "pg.public.order_items"
+    ],
+    "downstreamServices": [
+      "pg-37c7de3b"
+    ],
+    "credentialHolders": [],
+    "stacks": [
+      "Webshop"
+    ]
+  },
+  "plan": {
+    "options": [],
+    "note": "No plan prices were captured for application, so a fix here cannot state its cost yet."
+  }
+}

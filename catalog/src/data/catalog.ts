@@ -421,6 +421,16 @@ function marmotColumns(table: string): Column[] {
   })
 }
 
+/**
+ * Tables that hold keys or secrets rather than describe them. The tag rides with the table, so an
+ * agent reading the catalog is told to keep out at the point it would otherwise start reading:
+ * `agent-blocked` is worth nothing as a vocabulary entry nothing is ever tagged with.
+ */
+const secretBearing = new Set(['api_keys', 'service_account_api_keys', 'system_secrets'])
+
+const marmotTags = (name: string): string[] =>
+  secretBearing.has(name) ? ['marmot', 'credentials', 'agent-blocked'] : ['marmot']
+
 const marmotTableNames = [
   'agent_runs',
   'agent_tool_calls',
@@ -707,10 +717,10 @@ export const catalog: CatalogSnapshot = {
       { name: 'role', type: 'varchar', nullable: false, note: 'Permissions the key carries' },
       { name: 'enabled', type: 'boolean', nullable: false, note: 'False suspends the key' },
       { name: 'revoked_at', type: 'timestamptz', nullable: true, note: 'Set when the key was revoked for good; null while it is usable' },
-    ], { tags: ['control-plane'] }),
+    ], { tags: ['control-plane', 'credentials', 'agent-blocked'] }),
 
     ...marmotCoreTables.map((t) =>
-      table(`marmot.${t.name}`, t.name, 'marmot-pg', 'public', t.description, t.columns, { tags: ['marmot'] }),
+      table(`marmot.${t.name}`, t.name, 'marmot-pg', 'public', t.description, t.columns, { tags: marmotTags(t.name) }),
     ),
     ...marmotTableNames.map((name) =>
       marmotRelational[name]
@@ -721,9 +731,9 @@ export const catalog: CatalogSnapshot = {
             'public',
             `Marmot catalog table ${name}. ${marmotRelational[name][0]} columns in the database; the snapshot keeps its key columns, which are what the data model is drawn from.`,
             marmotColumns(name),
-            { tags: ['marmot'] },
+            { tags: marmotTags(name) },
           )
-        : table(`marmot.${name}`, name, 'marmot-pg', 'public', `Marmot catalog table ${name}. No keys and no column list in this snapshot: nothing references it and it references nothing.`, [], { tags: ['marmot'] }),
+        : table(`marmot.${name}`, name, 'marmot-pg', 'public', `Marmot catalog table ${name}. No keys and no column list in this snapshot: nothing references it and it references nothing.`, [], { tags: marmotTags(name) }),
     ),
 
     {

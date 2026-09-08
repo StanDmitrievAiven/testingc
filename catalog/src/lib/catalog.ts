@@ -1,5 +1,7 @@
-import { catalog, folderDescriptions } from '@/data/catalog'
-import type { Asset, LineageEdge, Service, Stack } from '@/types'
+// Relative rather than `@/`, on the same grounds as lib/operations.ts: it lets this run under plain
+// node, so the checks and the agent-context emitter can reuse blastRadius instead of copying it.
+import { catalog, folderDescriptions } from '../data/catalog.ts'
+import type { Asset, LineageEdge, Service, Stack } from '../types.ts'
 
 export function isRuntime(service: Service): boolean {
   return service.type === 'application'

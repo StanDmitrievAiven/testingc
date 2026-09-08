@@ -7,8 +7,19 @@
 //   queryStats     aiven_pg_service_query_statistics   (kept: queries touching catalogued tables)
 //   topicHealth    aiven_kafka_topic_get               (one call per topic; offsets are point-in-time)
 //   serviceFacts   aiven_service_get                   (only the four services the demo walks through)
+//   metricReadings aiven_service_metrics_fetch         (period: week; the busiest node per metric)
+//   connectors     aiven_kafka_connect_get_connector_status
+//   planLadder     aiven_service_plan_pricing          (the rungs the runbooks actually propose)
 // Imported by relative path, not the `@/` alias, so src/lib/operations.check.ts runs under plain node.
-import type { QueryStat, ServiceEvent, ServiceFacts, TopicHealth } from '../types.ts'
+import type {
+  ConnectorStatus,
+  MetricReading,
+  PlanRung,
+  QueryStat,
+  ServiceEvent,
+  ServiceFacts,
+  TopicHealth,
+} from '../types.ts'
 
 export const operationsCapturedAt = '2026-09-07T07:20:00Z'
 
@@ -316,5 +327,71 @@ export const serviceFacts: ServiceFacts[] = [
     latestBackupAt: '2026-09-06T08:45:06Z',
     backupCount: 2,
     pendingUpdates: [],
+  },
+]
+
+/**
+ * Metrics are a second capture, a day after the rest of this file, which is the point of stating a
+ * window per reading rather than one timestamp for the module: crm-pg's series stops a day before
+ * everyone else's, and an agent has to be able to see that before it acts on the number.
+ *
+ * One row per service and metric, taken from the busiest node: on kafka the three brokers each
+ * report their own series, and the one closest to trouble is the one worth keeping.
+ */
+export const metricsCapturedAt = '2026-09-08T10:55:00Z'
+
+export const metricReadings: MetricReading[] = [
+  // Webshop PostgreSQL: flat disk, moderate CPU. The shape of a service nobody needs to touch.
+  { serviceId: 'pg-37c7de3b', metric: 'disk_usage', series: 'pg-37c7de3b-8 (master)', min: 9.051, avg: 9.151, max: 9.245, latest: 9.245, from: '2026-09-01T10:55:00Z', to: '2026-09-08T10:55:00Z' },
+  { serviceId: 'pg-37c7de3b', metric: 'cpu_usage', series: 'pg-37c7de3b-8 (master)', min: 10.162, avg: 18.482, max: 30.88, latest: 16.428, from: '2026-09-01T10:55:00Z', to: '2026-09-08T10:55:00Z' },
+  { serviceId: 'pg-37c7de3b', metric: 'mem_usage', series: 'pg-37c7de3b-8 (master)', min: 46.236, avg: 47.583, max: 49.643, latest: 46.676, from: '2026-09-01T10:55:00Z', to: '2026-09-08T10:55:00Z' },
+
+  // Kafka, busiest broker per metric: disk on -7, CPU on -8, memory on -9.
+  { serviceId: 'kafka-1b5cb1e7', metric: 'disk_usage', series: 'kafka-1b5cb1e7-7', min: 1.953, avg: 2.51, max: 3.231, latest: 2.395, from: '2026-09-01T10:55:00Z', to: '2026-09-08T10:55:00Z' },
+  { serviceId: 'kafka-1b5cb1e7', metric: 'cpu_usage', series: 'kafka-1b5cb1e7-8', min: 14.99, avg: 16.041, max: 25.788, latest: 18.135, from: '2026-09-01T10:55:00Z', to: '2026-09-08T10:55:00Z' },
+  { serviceId: 'kafka-1b5cb1e7', metric: 'mem_usage', series: 'kafka-1b5cb1e7-9', min: 71.936, avg: 73.065, max: 74.253, latest: 73.39, from: '2026-09-01T10:55:00Z', to: '2026-09-08T10:55:00Z' },
+
+  // ClickHouse: idle apart from CPU spikes when a query lands.
+  { serviceId: 'clickhouse-2a6274d2', metric: 'disk_usage', series: 'clickhouse-2a6274d2-5', min: 0.828, avg: 1.308, max: 1.643, latest: 1.503, from: '2026-09-01T10:55:00Z', to: '2026-09-08T10:55:00Z' },
+  { serviceId: 'clickhouse-2a6274d2', metric: 'cpu_usage', series: 'clickhouse-2a6274d2-5', min: 7.137, avg: 8.046, max: 55.418, latest: 8.527, from: '2026-09-01T10:55:00Z', to: '2026-09-08T10:55:00Z' },
+  { serviceId: 'clickhouse-2a6274d2', metric: 'mem_usage', series: 'clickhouse-2a6274d2-5', min: 21.733, avg: 23.588, max: 29.514, latest: 25.077, from: '2026-09-01T10:55:00Z', to: '2026-09-08T10:55:00Z' },
+
+  // CRM PostgreSQL, the one with something to say: a three-day window that ended a day early, and
+  // disk that went from 1.7% to 6.6% inside it.
+  { serviceId: 'crm-pg', metric: 'disk_usage', series: 'crm-pg-1 (master)', min: 1.736, avg: 6.477, max: 6.585, latest: 6.585, from: '2026-09-04T08:45:00Z', to: '2026-09-07T08:45:00Z' },
+  { serviceId: 'crm-pg', metric: 'cpu_usage', series: 'crm-pg-1 (master)', min: 4.347, avg: 4.987, max: 65.117, latest: 10.575, from: '2026-09-04T08:45:00Z', to: '2026-09-07T08:45:00Z' },
+  { serviceId: 'crm-pg', metric: 'mem_usage', series: 'crm-pg-1 (master)', min: 55.365, avg: 73.248, max: 80.073, latest: 55.365, from: '2026-09-04T08:45:00Z', to: '2026-09-07T08:45:00Z' },
+]
+
+/**
+ * Connector state, which lag alone cannot tell you: a connector that died an hour ago and one that
+ * is merely behind look identical from the topic's side until retention starts dropping rows.
+ */
+export const connectorsCapturedAt = '2026-09-08T10:58:00Z'
+
+export const connectorStatuses: ConnectorStatus[] = [
+  {
+    connector: 'webshop-pg-cdc',
+    serviceId: 'kafkaconnect-30e121dd',
+    state: 'RUNNING',
+    tasksTotal: 1,
+    tasksRunning: 1,
+  },
+]
+
+/**
+ * Only the rungs a runbook here actually proposes, priced in the cloud this project runs in. Disk
+ * size and node count are the ones observed on the services already on each plan, not the whole
+ * catalogue entry, so nothing is claimed that was not seen.
+ */
+export const planLadder: PlanRung[] = [
+  { serviceType: 'pg', plan: 'hobbyist', cloud: 'aws-eu-west-1', usdPerHour: 0.034, diskGb: 8 },
+  {
+    serviceType: 'pg',
+    plan: 'startup-4',
+    cloud: 'aws-eu-west-1',
+    usdPerHour: 0.151,
+    diskGb: 80,
+    extraDiskUsdPerGbHour: 0.0004973907371,
   },
 ]

@@ -1,0 +1,385 @@
+{
+  "project": "data-innovation-summit",
+  "organization": "Aiven · Employee Playground",
+  "freeze": {
+    "active": true,
+    "from": "2026-09-08T00:00:00Z",
+    "to": "2026-09-12T23:59:59Z",
+    "reason": "Data Innovation Summit. The project is on stage, so nothing changes unattended, however good the reason."
+  },
+  "note": "A read-only snapshot: every fact names the tool it came from and when it was read. Facts are captured from the Aiven API; policy and runbooks are authored. Nothing here mutates anything.",
+  "runbooks": 8,
+  "services": [
+    {
+      "serviceId": "webshop-simulator",
+      "name": "webshop-simulator",
+      "type": "application",
+      "document": "/agent-context/webshop-simulator.json",
+      "findings": 0,
+      "worst": "none",
+      "mayActUnattended": [
+        "read metadata"
+      ]
+    },
+    {
+      "serviceId": "pg-37c7de3b",
+      "name": "pg-37c7de3b",
+      "type": "pg",
+      "document": "/agent-context/pg-37c7de3b.json",
+      "findings": 3,
+      "worst": "danger",
+      "mayActUnattended": [
+        "read metadata",
+        "read metrics",
+        "read query statistics"
+      ]
+    },
+    {
+      "serviceId": "kafkaconnect-30e121dd",
+      "name": "kafkaconnect-30e121dd",
+      "type": "kafka_connect",
+      "document": "/agent-context/kafkaconnect-30e121dd.json",
+      "findings": 0,
+      "worst": "none",
+      "mayActUnattended": [
+        "read connector status",
+        "read metrics"
+      ]
+    },
+    {
+      "serviceId": "kafka-1b5cb1e7",
+      "name": "kafka-1b5cb1e7",
+      "type": "kafka",
+      "document": "/agent-context/kafka-1b5cb1e7.json",
+      "findings": 2,
+      "worst": "danger",
+      "mayActUnattended": [
+        "read metadata",
+        "read metrics",
+        "read topic configuration",
+        "read consumer lag"
+      ]
+    },
+    {
+      "serviceId": "clickhouse-2a6274d2",
+      "name": "clickhouse-2a6274d2",
+      "type": "clickhouse",
+      "document": "/agent-context/clickhouse-2a6274d2.json",
+      "findings": 5,
+      "worst": "danger",
+      "mayActUnattended": [
+        "read metadata",
+        "read metrics"
+      ]
+    },
+    {
+      "serviceId": "trino-hub",
+      "name": "trino-hub",
+      "type": "application",
+      "document": "/agent-context/trino-hub.json",
+      "findings": 0,
+      "worst": "none",
+      "mayActUnattended": [
+        "read metadata"
+      ]
+    },
+    {
+      "serviceId": "trino-hub-pg",
+      "name": "trino-hub-pg",
+      "type": "pg",
+      "document": "/agent-context/trino-hub-pg.json",
+      "findings": 0,
+      "worst": "none",
+      "mayActUnattended": [
+        "read metadata"
+      ]
+    },
+    {
+      "serviceId": "trino2",
+      "name": "trino2",
+      "type": "application",
+      "document": "/agent-context/trino2.json",
+      "findings": 0,
+      "worst": "none",
+      "mayActUnattended": [
+        "read metadata"
+      ]
+    },
+    {
+      "serviceId": "trino2-pg",
+      "name": "trino2-pg",
+      "type": "pg",
+      "document": "/agent-context/trino2-pg.json",
+      "findings": 0,
+      "worst": "none",
+      "mayActUnattended": [
+        "read metadata"
+      ]
+    },
+    {
+      "serviceId": "datahub-1c8ec127",
+      "name": "datahub-1c8ec127",
+      "type": "datahub",
+      "document": "/agent-context/datahub-1c8ec127.json",
+      "findings": 0,
+      "worst": "none",
+      "mayActUnattended": [
+        "read metadata"
+      ]
+    },
+    {
+      "serviceId": "marmot-catalog",
+      "name": "marmot-catalog",
+      "type": "application",
+      "document": "/agent-context/marmot-catalog.json",
+      "findings": 0,
+      "worst": "none",
+      "mayActUnattended": [
+        "read metadata"
+      ]
+    },
+    {
+      "serviceId": "marmot-pg",
+      "name": "marmot-pg",
+      "type": "pg",
+      "document": "/agent-context/marmot-pg.json",
+      "findings": 0,
+      "worst": "none",
+      "mayActUnattended": [
+        "read metadata"
+      ]
+    },
+    {
+      "serviceId": "analytics-agent",
+      "name": "analytics-agent",
+      "type": "application",
+      "document": "/agent-context/analytics-agent.json",
+      "findings": 0,
+      "worst": "none",
+      "mayActUnattended": [
+        "read metadata"
+      ]
+    },
+    {
+      "serviceId": "analytics-agent-pg",
+      "name": "analytics-agent-pg",
+      "type": "pg",
+      "document": "/agent-context/analytics-agent-pg.json",
+      "findings": 0,
+      "worst": "none",
+      "mayActUnattended": [
+        "read metadata"
+      ]
+    },
+    {
+      "serviceId": "dashboard-api",
+      "name": "dashboard-api",
+      "type": "application",
+      "document": "/agent-context/dashboard-api.json",
+      "findings": 0,
+      "worst": "none",
+      "mayActUnattended": [
+        "read metadata"
+      ]
+    },
+    {
+      "serviceId": "dashboard-web",
+      "name": "dashboard-web",
+      "type": "application",
+      "document": "/agent-context/dashboard-web.json",
+      "findings": 0,
+      "worst": "none",
+      "mayActUnattended": [
+        "read metadata"
+      ]
+    },
+    {
+      "serviceId": "lightdash",
+      "name": "lightdash",
+      "type": "application",
+      "document": "/agent-context/lightdash.json",
+      "findings": 0,
+      "worst": "none",
+      "mayActUnattended": [
+        "read metadata"
+      ]
+    },
+    {
+      "serviceId": "pg-lightdash",
+      "name": "pg-lightdash",
+      "type": "pg",
+      "document": "/agent-context/pg-lightdash.json",
+      "findings": 0,
+      "worst": "none",
+      "mayActUnattended": [
+        "read metadata"
+      ]
+    },
+    {
+      "serviceId": "datahub-mcp",
+      "name": "datahub-mcp",
+      "type": "application",
+      "document": "/agent-context/datahub-mcp.json",
+      "findings": 0,
+      "worst": "none",
+      "mayActUnattended": [
+        "read metadata"
+      ]
+    },
+    {
+      "serviceId": "datahub-connection-wizard",
+      "name": "datahub-connection-wizard",
+      "type": "application",
+      "document": "/agent-context/datahub-connection-wizard.json",
+      "findings": 0,
+      "worst": "none",
+      "mayActUnattended": [
+        "read metadata"
+      ]
+    },
+    {
+      "serviceId": "managed-agents-e55f68a7-runtime",
+      "name": "managed-agents-e55f68a7-runtime",
+      "type": "application",
+      "document": "/agent-context/managed-agents-e55f68a7-runtime.json",
+      "findings": 0,
+      "worst": "none",
+      "mayActUnattended": [
+        "read metadata"
+      ]
+    },
+    {
+      "serviceId": "managed-agents-e55f68a7-db",
+      "name": "managed-agents-e55f68a7-db",
+      "type": "pg",
+      "document": "/agent-context/managed-agents-e55f68a7-db.json",
+      "findings": 0,
+      "worst": "none",
+      "mayActUnattended": [
+        "read metadata"
+      ]
+    },
+    {
+      "serviceId": "crm-app",
+      "name": "crm-app",
+      "type": "application",
+      "document": "/agent-context/crm-app.json",
+      "findings": 0,
+      "worst": "none",
+      "mayActUnattended": [
+        "read metadata"
+      ]
+    },
+    {
+      "serviceId": "crm-sql",
+      "name": "crm-sql",
+      "type": "application",
+      "document": "/agent-context/crm-sql.json",
+      "findings": 0,
+      "worst": "none",
+      "mayActUnattended": [
+        "read metadata"
+      ]
+    },
+    {
+      "serviceId": "crm-pg",
+      "name": "crm-pg",
+      "type": "pg",
+      "document": "/agent-context/crm-pg.json",
+      "findings": 6,
+      "worst": "danger",
+      "mayActUnattended": [
+        "read metadata",
+        "read metrics"
+      ]
+    },
+    {
+      "serviceId": "datahub-1c8ec127-frontend",
+      "name": "datahub-1c8ec127-frontend",
+      "type": "application",
+      "document": "/agent-context/datahub-1c8ec127-frontend.json",
+      "findings": 0,
+      "worst": "none",
+      "mayActUnattended": [
+        "read metadata"
+      ]
+    },
+    {
+      "serviceId": "datahub-1c8ec127-gms",
+      "name": "datahub-1c8ec127-gms",
+      "type": "application",
+      "document": "/agent-context/datahub-1c8ec127-gms.json",
+      "findings": 0,
+      "worst": "none",
+      "mayActUnattended": [
+        "read metadata"
+      ]
+    },
+    {
+      "serviceId": "datahub-1c8ec127-actions",
+      "name": "datahub-1c8ec127-actions",
+      "type": "application",
+      "document": "/agent-context/datahub-1c8ec127-actions.json",
+      "findings": 0,
+      "worst": "none",
+      "mayActUnattended": [
+        "read metadata"
+      ]
+    },
+    {
+      "serviceId": "datahub-1c8ec127-upgrade",
+      "name": "datahub-1c8ec127-upgrade",
+      "type": "application",
+      "document": "/agent-context/datahub-1c8ec127-upgrade.json",
+      "findings": 0,
+      "worst": "none",
+      "mayActUnattended": [
+        "read metadata"
+      ]
+    },
+    {
+      "serviceId": "datahub-1c8ec127-kafka",
+      "name": "datahub-1c8ec127-kafka",
+      "type": "kafka",
+      "document": "/agent-context/datahub-1c8ec127-kafka.json",
+      "findings": 0,
+      "worst": "none",
+      "mayActUnattended": [
+        "read metadata"
+      ]
+    },
+    {
+      "serviceId": "datahub-1c8ec127-opensearch",
+      "name": "datahub-1c8ec127-opensearch",
+      "type": "opensearch",
+      "document": "/agent-context/datahub-1c8ec127-opensearch.json",
+      "findings": 0,
+      "worst": "none",
+      "mayActUnattended": [
+        "read metadata"
+      ]
+    },
+    {
+      "serviceId": "datahub-1c8ec127-postgresql",
+      "name": "datahub-1c8ec127-postgresql",
+      "type": "pg",
+      "document": "/agent-context/datahub-1c8ec127-postgresql.json",
+      "findings": 0,
+      "worst": "none",
+      "mayActUnattended": [
+        "read metadata"
+      ]
+    },
+    {
+      "serviceId": "os-ddec4cf-dhtest",
+      "name": "os-ddec4cf-dhtest",
+      "type": "opensearch",
+      "document": "/agent-context/os-ddec4cf-dhtest.json",
+      "findings": 0,
+      "worst": "none",
+      "mayActUnattended": [
+        "read metadata"
+      ]
+    }
+  ]
+}

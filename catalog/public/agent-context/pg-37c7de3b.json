@@ -1,0 +1,195 @@
+{
+  "serviceId": "pg-37c7de3b",
+  "name": "pg-37c7de3b",
+  "type": "pg",
+  "captured": {
+    "catalog": "2026-09-07T07:20:00Z",
+    "serviceFacts": "2026-09-07T07:20:00Z",
+    "metrics": "2026-09-08T10:55:00Z",
+    "connectors": "2026-09-08T10:58:00Z",
+    "purposeLog": "2026-09-04T12:05:41.806Z",
+    "policy": "authored, not captured"
+  },
+  "policy": {
+    "serviceId": "pg-37c7de3b",
+    "allowed": [
+      "read metadata",
+      "read metrics",
+      "read query statistics"
+    ],
+    "needsApproval": [
+      "restart",
+      "change plan",
+      "change ip filter",
+      "terminate a session"
+    ],
+    "forbidden": [
+      "delete the service",
+      "drop the replication slot",
+      "disable backups"
+    ],
+    "because": "Single node holding the webshop source of truth, and the CDC connector reads its replication slot: dropping that slot loses changes that no downstream copy can reconstruct."
+  },
+  "freeze": {
+    "active": true,
+    "from": "2026-09-08T00:00:00Z",
+    "to": "2026-09-12T23:59:59Z",
+    "reason": "Data Innovation Summit. The project is on stage, so nothing changes unattended, however good the reason."
+  },
+  "contacts": [
+    {
+      "email": "stan.dmitriev@aiven.io",
+      "why": "Technical contact on the service, and changed it 2 times in the event log"
+    },
+    {
+      "email": "ayesha.ahmad@aiven.io",
+      "why": "Last touched it: changed it 2 times in the event log"
+    }
+  ],
+  "ownership": "Observed, not declared: Marmot's asset_owners and teams tables are empty, so these are the people Aiven lists as contacts and the people the event log shows changing this service.",
+  "findings": [
+    {
+      "kind": "open-to-internet",
+      "severity": "danger",
+      "title": "Reachable from 0.0.0.0/0",
+      "detail": "The ip filter allows every address, so the only thing between this service and the internet is its password.",
+      "source": "aiven_service_get",
+      "capturedAt": "2026-09-07T07:20:00Z",
+      "runbook": {
+        "forFinding": "open-to-internet",
+        "title": "Close the service to the open internet",
+        "steps": [
+          "List what actually connects: the integrations in this catalog plus any application using a service credential.",
+          "Collect the egress ranges those clients come from. A guess here locks out production.",
+          "Replace the ip_filter with that list using aiven_service_update, leaving 0.0.0.0/0 out.",
+          "Keep your own access in the list, or you lock yourself out along with everyone else."
+        ],
+        "whileItRuns": "Established connections survive. New connections from anything outside the list are refused immediately, which is the whole point and also the risk.",
+        "takes": "Seconds to apply.",
+        "rollback": "Reversible: put the previous filter back with the same call.",
+        "verify": "Connect from an allowed address, then from one that is not. The second attempt must fail, or the filter did not take."
+      }
+    },
+    {
+      "kind": "single-node",
+      "severity": "caution",
+      "title": "One node, so a restart is an outage",
+      "detail": "There is nothing to fail over to. Every restart, plan change and platform update is downtime that has to be timed rather than absorbed.",
+      "source": "aiven_service_get",
+      "capturedAt": "2026-09-07T07:20:00Z",
+      "runbook": {
+        "forFinding": "single-node",
+        "title": "Restart a service that has no second node",
+        "steps": [
+          "Treat this as planned downtime and announce it, because that is what it is.",
+          "Check no platform maintenance is already in flight for the same service.",
+          "Prefer the existing maintenance window over a restart of your own.",
+          "Restart, then watch the dependents rather than the service: it comes back before they do."
+        ],
+        "whileItRuns": "A total outage for the length of the restart. Change data capture stops and resumes from its replication slot; consumers downstream fall behind rather than lose data.",
+        "takes": "A few minutes, most of it the service coming back up.",
+        "rollback": "None. A restart cannot be undone, only waited out.",
+        "verify": "Service state RUNNING, the CDC connector back to RUNNING, and consumer lag falling across two readings rather than one."
+      }
+    },
+    {
+      "kind": "no-termination-protection",
+      "severity": "info",
+      "title": "Termination protection is off",
+      "detail": "Nothing stands between a deletion call and this service, which is a cheap gap to close.",
+      "source": "aiven_service_get",
+      "capturedAt": "2026-09-07T07:20:00Z",
+      "runbook": {
+        "forFinding": "no-termination-protection",
+        "title": "Turn on termination protection",
+        "steps": [
+          "Set termination protection with aiven_service_update."
+        ],
+        "whileItRuns": "Nothing. It is a configuration flag, with no restart.",
+        "takes": "Seconds.",
+        "rollback": "Reversible with the same call, which is exactly why it is worth having on.",
+        "verify": "Read the service back and confirm the flag is set."
+      }
+    }
+  ],
+  "readings": [
+    {
+      "serviceId": "pg-37c7de3b",
+      "metric": "disk_usage",
+      "series": "pg-37c7de3b-8 (master)",
+      "min": 9.051,
+      "avg": 9.151,
+      "max": 9.245,
+      "latest": 9.245,
+      "from": "2026-09-01T10:55:00Z",
+      "to": "2026-09-08T10:55:00Z",
+      "staleHours": 0,
+      "trend": {
+        "perDay": 0.02771428571428558,
+        "windowDays": 7,
+        "daysToFull": 3274.6649484536238,
+        "includesInitialLoad": false
+      }
+    },
+    {
+      "serviceId": "pg-37c7de3b",
+      "metric": "cpu_usage",
+      "series": "pg-37c7de3b-8 (master)",
+      "min": 10.162,
+      "avg": 18.482,
+      "max": 30.88,
+      "latest": 16.428,
+      "from": "2026-09-01T10:55:00Z",
+      "to": "2026-09-08T10:55:00Z",
+      "staleHours": 0
+    },
+    {
+      "serviceId": "pg-37c7de3b",
+      "metric": "mem_usage",
+      "series": "pg-37c7de3b-8 (master)",
+      "min": 46.236,
+      "avg": 47.583,
+      "max": 49.643,
+      "latest": 46.676,
+      "from": "2026-09-01T10:55:00Z",
+      "to": "2026-09-08T10:55:00Z",
+      "staleHours": 0
+    }
+  ],
+  "dependents": {
+    "datasets": 5,
+    "downstreamAssets": [
+      "kafka.webshop.public.customers",
+      "kafka.webshop.public.products",
+      "kafka.webshop.public.orders",
+      "kafka.webshop.public.order_items",
+      "ch.pg.marketing.campaigns",
+      "trino.summit_pg",
+      "app.datahub-1c8ec127"
+    ],
+    "downstreamServices": [
+      "kafka-1b5cb1e7",
+      "clickhouse-2a6274d2",
+      "trino-hub",
+      "datahub-1c8ec127"
+    ],
+    "credentialHolders": [
+      "webshop-simulator"
+    ],
+    "stacks": [
+      "Webshop"
+    ]
+  },
+  "plan": {
+    "current": {
+      "serviceType": "pg",
+      "plan": "startup-4",
+      "cloud": "aws-eu-west-1",
+      "usdPerHour": 0.151,
+      "diskGb": 80,
+      "extraDiskUsdPerGbHour": 0.0004973907371
+    },
+    "options": [],
+    "note": "On startup-4, disk can be bought without changing plan at $0.000497 per GB per hour."
+  }
+}
