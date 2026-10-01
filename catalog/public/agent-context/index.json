@@ -7,27 +7,362 @@
     "to": "2026-09-12T23:59:59Z",
     "reason": "Data Innovation Summit. The project is on stage, so nothing changes unattended, however good the reason."
   },
-  "note": "A read-only snapshot: every fact names the tool it came from and when it was read. Facts are captured from the Aiven API; policy and runbooks are authored. Nothing here mutates anything.",
-  "runbooks": 8,
+  "note": "A read-only snapshot: every fact names the tool it came from and when it was read. Facts are captured from the Aiven API; policy, objectives and runbooks are authored. Nothing here mutates anything.",
+  "runbooks": 11,
+  "endpoints": {
+    "service_explain": {
+      "url": "/service-explain/{serviceId}.json",
+      "returns": "Everything about one service: what it is and how critical, every dataset and column under it, lineage in both directions with what it eventually reaches, findings with their runbooks, and what may and may not be done to it. Starts with a `summary` paragraph carrying the same answer in prose.",
+      "use": "Call this first, before acting on a service or answering a question about one. The per-service document under /agent-context/ is the same thing without the data inventory.",
+      "serviceIds": [
+        "webshop-simulator",
+        "pg-37c7de3b",
+        "kafkaconnect-30e121dd",
+        "kafka-1b5cb1e7",
+        "clickhouse-2a6274d2",
+        "trino-hub",
+        "trino-hub-pg",
+        "trino2",
+        "trino2-pg",
+        "datahub-1c8ec127",
+        "marmot-catalog",
+        "marmot-pg",
+        "analytics-agent",
+        "analytics-agent-pg",
+        "dashboard-api",
+        "dashboard-web",
+        "lightdash",
+        "pg-lightdash",
+        "datahub-mcp",
+        "datahub-connection-wizard",
+        "managed-agents-e55f68a7-runtime",
+        "managed-agents-e55f68a7-db",
+        "crm-app",
+        "crm-sql",
+        "crm-pg",
+        "datahub-1c8ec127-frontend",
+        "datahub-1c8ec127-gms",
+        "datahub-1c8ec127-actions",
+        "datahub-1c8ec127-upgrade",
+        "datahub-1c8ec127-kafka",
+        "datahub-1c8ec127-opensearch",
+        "datahub-1c8ec127-postgresql",
+        "os-ddec4cf-dhtest"
+      ]
+    },
+    "asset": {
+      "url": "/agent-context/asset/{assetId}.json",
+      "returns": "One dataset: description, columns, owners, tags with their meanings, facts each labelled captured, authored or derived, its own findings, how to deserialize it where it is a stream, whether anything uses it, what it costs, and where a problem with it most likely comes from.",
+      "use": "Call this when the question is about a table or a topic rather than about a service, so an investigation is one fetch rather than five.",
+      "assetIds": [
+        "pg.public.customers",
+        "pg.public.products",
+        "pg.public.orders",
+        "pg.public.order_items",
+        "pg.marketing.campaigns",
+        "kafka.webshop.public.customers",
+        "kafka.webshop.public.products",
+        "kafka.webshop.public.orders",
+        "kafka.webshop.public.order_items",
+        "connect.webshop-pg-cdc",
+        "ch.service_kafka.customers",
+        "ch.service_kafka.products",
+        "ch.service_kafka.orders",
+        "ch.service_kafka.order_items",
+        "ch.pg.marketing.campaigns",
+        "trino.summit_pg",
+        "trino.summit_clickhouse",
+        "agent.conversations",
+        "agent.messages",
+        "agent.integrations",
+        "agent.context_platforms",
+        "agent.settings",
+        "crm.public.accounts",
+        "crm.public.account_notes",
+        "trino.trino_catalogs",
+        "trino.trino_audit_events",
+        "trino.trino_kafka_config",
+        "trino.trino_users",
+        "trino.trino_mcp_api_keys",
+        "marmot.assets",
+        "marmot.lineage_edges",
+        "marmot.data_products",
+        "marmot.glossary_terms",
+        "marmot.agent_runs",
+        "marmot.agent_tool_calls",
+        "marmot.aggregated_metrics",
+        "marmot.api_keys",
+        "marmot.asset_owners",
+        "marmot.asset_rule_memberships",
+        "marmot.asset_rule_targets",
+        "marmot.asset_rule_terms",
+        "marmot.asset_rules",
+        "marmot.asset_schedules",
+        "marmot.asset_statistics",
+        "marmot.asset_subscriptions",
+        "marmot.asset_tags",
+        "marmot.asset_terms",
+        "marmot.data_product_memberships",
+        "marmot.data_product_owners",
+        "marmot.data_product_rule_targets",
+        "marmot.data_product_rules",
+        "marmot.doc_images",
+        "marmot.doc_pages",
+        "marmot.documentation",
+        "marmot.global_documentation",
+        "marmot.glossary_term_owners",
+        "marmot.ingestion_job_runs",
+        "marmot.ingestion_schedules",
+        "marmot.lineage_events",
+        "marmot.lookup_counters",
+        "marmot.metrics_timeseries",
+        "marmot.notifications",
+        "marmot.permissions",
+        "marmot.product_images",
+        "marmot.raw_metrics",
+        "marmot.role_permissions",
+        "marmot.roles",
+        "marmot.run_checkpoints",
+        "marmot.run_entities",
+        "marmot.run_history",
+        "marmot.runs",
+        "marmot.schema_version",
+        "marmot.search_index",
+        "marmot.service_account_api_keys",
+        "marmot.service_account_roles",
+        "marmot.service_accounts",
+        "marmot.sso_team_mappings",
+        "marmot.summary_counts",
+        "marmot.system_secrets",
+        "marmot.team_members",
+        "marmot.team_webhooks",
+        "marmot.teams",
+        "marmot.telemetry_install",
+        "marmot.user_identities",
+        "marmot.user_roles",
+        "marmot.users",
+        "app.webshop-simulator",
+        "app.analytics-agent",
+        "app.trino-hub",
+        "app.marmot-catalog",
+        "app.lightdash",
+        "app.crm-app",
+        "app.crm-sql",
+        "app.datahub-1c8ec127"
+      ]
+    }
+  },
+  "fleet": {
+    "findings": [
+      {
+        "kind": "fleet-open-to-internet",
+        "severity": "danger",
+        "title": "7 of 7 captured services accept connections from 0.0.0.0/0",
+        "detail": "pg-37c7de3b, kafka-1b5cb1e7, clickhouse-2a6274d2, crm-pg, marmot-pg, trino-hub-pg, os-ddec4cf-dhtest. One service open to the world is a decision; every service open to the world is a default nobody chose, and it is the kind of thing that is invisible one service page at a time.",
+        "serviceIds": [
+          "pg-37c7de3b",
+          "kafka-1b5cb1e7",
+          "clickhouse-2a6274d2",
+          "crm-pg",
+          "marmot-pg",
+          "trino-hub-pg",
+          "os-ddec4cf-dhtest"
+        ],
+        "source": "aiven_service_get",
+        "capturedAt": "2026-09-15T08:20:00Z"
+      },
+      {
+        "kind": "fleet-weak-password-encryption",
+        "severity": "caution",
+        "title": "2 Postgres services still store passwords as md5",
+        "detail": "marmot-pg, trino-hub-pg. scram-sha-256 has been the Postgres default since version 14 and md5 is deprecated upstream. Nobody chose this per service, which is exactly why it only shows up across a fleet.",
+        "serviceIds": [
+          "marmot-pg",
+          "trino-hub-pg"
+        ],
+        "source": "aiven_service_get",
+        "capturedAt": "2026-09-15T08:20:00Z"
+      },
+      {
+        "kind": "fleet-no-termination-protection",
+        "severity": "caution",
+        "title": "7 of 7 captured services can be deleted with one call",
+        "detail": "pg-37c7de3b, kafka-1b5cb1e7, clickhouse-2a6274d2, crm-pg, marmot-pg, trino-hub-pg, os-ddec4cf-dhtest. Termination protection is a flag with no restart and no cost, and it is the only thing that makes an accidental delete fail rather than succeed.",
+        "serviceIds": [
+          "pg-37c7de3b",
+          "kafka-1b5cb1e7",
+          "clickhouse-2a6274d2",
+          "crm-pg",
+          "marmot-pg",
+          "trino-hub-pg",
+          "os-ddec4cf-dhtest"
+        ],
+        "source": "aiven_service_get",
+        "capturedAt": "2026-09-15T08:20:00Z"
+      },
+      {
+        "kind": "fleet-no-contact",
+        "severity": "caution",
+        "title": "23 of 33 services have nobody to tell",
+        "detail": "No technical contact on the service, and nobody in its event log. An agent that finds a real problem on one of these has nowhere to escalate, which turns a finding into a dead end at the worst possible moment.",
+        "serviceIds": [
+          "webshop-simulator",
+          "trino-hub",
+          "trino2",
+          "trino2-pg",
+          "datahub-1c8ec127",
+          "marmot-catalog",
+          "analytics-agent",
+          "analytics-agent-pg",
+          "dashboard-api",
+          "dashboard-web",
+          "lightdash",
+          "pg-lightdash",
+          "datahub-mcp",
+          "datahub-connection-wizard",
+          "managed-agents-e55f68a7-runtime",
+          "managed-agents-e55f68a7-db",
+          "datahub-1c8ec127-frontend",
+          "datahub-1c8ec127-gms",
+          "datahub-1c8ec127-actions",
+          "datahub-1c8ec127-upgrade",
+          "datahub-1c8ec127-opensearch",
+          "datahub-1c8ec127-postgresql",
+          "os-ddec4cf-dhtest"
+        ],
+        "source": "aiven_service_get, aiven_project_get_event_logs",
+        "capturedAt": "2026-09-07T07:20:00Z"
+      },
+      {
+        "kind": "fleet-unclassified",
+        "severity": "info",
+        "title": "25 of 33 services have no classification and no policy",
+        "detail": "Each one resolves to read-only, which is the safe answer and not a useful one: an agent asked to help with any of them can only look. Classifying a service is the cheapest way to make it actionable, and it is the gap to close before any of the rest of this is worth automating.",
+        "serviceIds": [
+          "webshop-simulator",
+          "trino-hub",
+          "trino2",
+          "trino2-pg",
+          "datahub-1c8ec127",
+          "marmot-catalog",
+          "analytics-agent",
+          "analytics-agent-pg",
+          "dashboard-api",
+          "dashboard-web",
+          "lightdash",
+          "pg-lightdash",
+          "datahub-mcp",
+          "datahub-connection-wizard",
+          "managed-agents-e55f68a7-runtime",
+          "managed-agents-e55f68a7-db",
+          "crm-app",
+          "crm-sql",
+          "datahub-1c8ec127-frontend",
+          "datahub-1c8ec127-gms",
+          "datahub-1c8ec127-actions",
+          "datahub-1c8ec127-upgrade",
+          "datahub-1c8ec127-kafka",
+          "datahub-1c8ec127-opensearch",
+          "datahub-1c8ec127-postgresql"
+        ],
+        "source": "this catalog",
+        "capturedAt": "2026-09-07T07:20:00Z"
+      },
+      {
+        "kind": "fleet-dead-workflow",
+        "severity": "info",
+        "title": "19 datasets are named by nothing that reads them",
+        "detail": "agent_tool_calls, aggregated_metrics, asset_rule_targets, asset_rule_terms, asset_schedules, asset_subscriptions, and 13 more. No catalogued reader, no foreign key pointing at them, and no statement naming them in the full capture from their service. service_account_api_keys also holds credentials, so it is a secret nothing appears to need. This can only see 66 of 94 assets at all, and none of it proves nobody reads them — a consumer with a connection string leaves no trace here.",
+        "serviceIds": [
+          "marmot-pg"
+        ],
+        "source": "pg_stat_statements read in full, aiven_kafka_topic_get, this catalog",
+        "capturedAt": "2026-09-15T08:20:00Z"
+      },
+      {
+        "kind": "fleet-stale-evidence",
+        "severity": "info",
+        "title": "4 services were last read 8 days before the newest capture here",
+        "detail": "pg-37c7de3b, kafka-1b5cb1e7, clickhouse-2a6274d2, crm-pg. Their findings are still true as of when they were read, which is not the same as being true now. This is the difference between a catalog and a monitor, and it is worth stating rather than smoothing over.",
+        "serviceIds": [
+          "pg-37c7de3b",
+          "kafka-1b5cb1e7",
+          "clickhouse-2a6274d2",
+          "crm-pg"
+        ],
+        "source": "capture timestamps in this snapshot",
+        "capturedAt": "2026-09-15T08:20:00Z"
+      }
+    ],
+    "coverage": {
+      "services": 33,
+      "dimensions": [
+        {
+          "name": "Operational facts",
+          "have": 7,
+          "of": 33,
+          "note": "Plan, nodes, exposure, backups and queued maintenance, from aiven_service_get."
+        },
+        {
+          "name": "Metrics",
+          "have": 4,
+          "of": 33,
+          "note": "Disk, CPU and memory. Without these there is no headroom and no capacity finding."
+        },
+        {
+          "name": "Classification",
+          "have": 8,
+          "of": 33,
+          "note": "Environment and criticality. Unclassified services fall back to read-only."
+        },
+        {
+          "name": "Somebody to tell",
+          "have": 10,
+          "of": 33,
+          "note": "A technical contact, or anyone visible in the event log. Observed, never declared."
+        },
+        {
+          "name": "Described assets",
+          "have": 94,
+          "of": 94,
+          "note": "Tables, topics and applications carrying a description rather than a name alone."
+        }
+      ]
+    },
+    "note": "Fleet findings are patterns across services rather than facts about any one of them, and coverage counts an unset field as missing rather than as a default. Thin context is a reason to decline."
+  },
   "services": [
     {
-      "serviceId": "webshop-simulator",
-      "name": "webshop-simulator",
-      "type": "application",
-      "document": "/agent-context/webshop-simulator.json",
-      "findings": 0,
-      "worst": "none",
+      "serviceId": "crm-pg",
+      "name": "crm-pg",
+      "type": "pg",
+      "state": "RUNNING",
+      "environment": "production",
+      "criticality": "critical",
+      "document": "/agent-context/crm-pg.json",
+      "explain": "/service-explain/crm-pg.json",
+      "findings": 6,
+      "worst": "danger",
+      "worstFinding": "Reachable from 0.0.0.0/0",
+      "contextKnown": "5/5",
       "mayActUnattended": [
-        "read metadata"
+        "read metadata",
+        "read metrics"
       ]
     },
     {
       "serviceId": "pg-37c7de3b",
       "name": "pg-37c7de3b",
       "type": "pg",
+      "state": "RUNNING",
+      "environment": "production",
+      "criticality": "critical",
       "document": "/agent-context/pg-37c7de3b.json",
+      "explain": "/service-explain/pg-37c7de3b.json",
       "findings": 3,
       "worst": "danger",
+      "worstFinding": "Reachable from 0.0.0.0/0",
+      "contextKnown": "5/5",
       "mayActUnattended": [
         "read metadata",
         "read metrics",
@@ -35,24 +370,18 @@
       ]
     },
     {
-      "serviceId": "kafkaconnect-30e121dd",
-      "name": "kafkaconnect-30e121dd",
-      "type": "kafka_connect",
-      "document": "/agent-context/kafkaconnect-30e121dd.json",
-      "findings": 0,
-      "worst": "none",
-      "mayActUnattended": [
-        "read connector status",
-        "read metrics"
-      ]
-    },
-    {
       "serviceId": "kafka-1b5cb1e7",
       "name": "kafka-1b5cb1e7",
       "type": "kafka",
+      "state": "RUNNING",
+      "environment": "production",
+      "criticality": "critical",
       "document": "/agent-context/kafka-1b5cb1e7.json",
+      "explain": "/service-explain/kafka-1b5cb1e7.json",
       "findings": 2,
       "worst": "danger",
+      "worstFinding": "Reachable from 0.0.0.0/0",
+      "contextKnown": "5/5",
       "mayActUnattended": [
         "read metadata",
         "read metrics",
@@ -64,98 +393,89 @@
       "serviceId": "clickhouse-2a6274d2",
       "name": "clickhouse-2a6274d2",
       "type": "clickhouse",
+      "state": "RUNNING",
+      "environment": "production",
+      "criticality": "important",
       "document": "/agent-context/clickhouse-2a6274d2.json",
+      "explain": "/service-explain/clickhouse-2a6274d2.json",
       "findings": 5,
       "worst": "danger",
+      "worstFinding": "Reachable from 0.0.0.0/0",
+      "contextKnown": "5/5",
       "mayActUnattended": [
         "read metadata",
         "read metrics"
       ]
     },
     {
-      "serviceId": "trino-hub",
-      "name": "trino-hub",
-      "type": "application",
-      "document": "/agent-context/trino-hub.json",
-      "findings": 0,
-      "worst": "none",
+      "serviceId": "marmot-pg",
+      "name": "marmot-pg",
+      "type": "pg",
+      "state": "RUNNING",
+      "environment": "production",
+      "criticality": "standard",
+      "document": "/agent-context/marmot-pg.json",
+      "explain": "/service-explain/marmot-pg.json",
+      "findings": 5,
+      "worst": "danger",
+      "worstFinding": "Reachable from 0.0.0.0/0",
+      "contextKnown": "4/5",
       "mayActUnattended": [
-        "read metadata"
+        "read metadata",
+        "read metrics",
+        "apply pending maintenance"
       ]
     },
     {
       "serviceId": "trino-hub-pg",
       "name": "trino-hub-pg",
       "type": "pg",
+      "state": "RUNNING",
+      "environment": "production",
+      "criticality": "standard",
       "document": "/agent-context/trino-hub-pg.json",
-      "findings": 0,
-      "worst": "none",
+      "explain": "/service-explain/trino-hub-pg.json",
+      "findings": 5,
+      "worst": "danger",
+      "worstFinding": "Reachable from 0.0.0.0/0",
+      "contextKnown": "4/5",
       "mayActUnattended": [
-        "read metadata"
+        "read metadata",
+        "read metrics",
+        "apply pending maintenance"
       ]
     },
     {
-      "serviceId": "trino2",
-      "name": "trino2",
-      "type": "application",
-      "document": "/agent-context/trino2.json",
-      "findings": 0,
-      "worst": "none",
+      "serviceId": "os-ddec4cf-dhtest",
+      "name": "os-ddec4cf-dhtest",
+      "type": "opensearch",
+      "state": "POWEROFF",
+      "environment": "test",
+      "criticality": "low",
+      "document": "/agent-context/os-ddec4cf-dhtest.json",
+      "explain": "/service-explain/os-ddec4cf-dhtest.json",
+      "findings": 3,
+      "worst": "caution",
+      "worstFinding": "Open to 0.0.0.0/0 the moment it powers on",
+      "contextKnown": "3/5",
       "mayActUnattended": [
-        "read metadata"
-      ]
-    },
-    {
-      "serviceId": "trino2-pg",
-      "name": "trino2-pg",
-      "type": "pg",
-      "document": "/agent-context/trino2-pg.json",
-      "findings": 0,
-      "worst": "none",
-      "mayActUnattended": [
-        "read metadata"
-      ]
-    },
-    {
-      "serviceId": "datahub-1c8ec127",
-      "name": "datahub-1c8ec127",
-      "type": "datahub",
-      "document": "/agent-context/datahub-1c8ec127.json",
-      "findings": 0,
-      "worst": "none",
-      "mayActUnattended": [
-        "read metadata"
-      ]
-    },
-    {
-      "serviceId": "marmot-catalog",
-      "name": "marmot-catalog",
-      "type": "application",
-      "document": "/agent-context/marmot-catalog.json",
-      "findings": 0,
-      "worst": "none",
-      "mayActUnattended": [
-        "read metadata"
-      ]
-    },
-    {
-      "serviceId": "marmot-pg",
-      "name": "marmot-pg",
-      "type": "pg",
-      "document": "/agent-context/marmot-pg.json",
-      "findings": 0,
-      "worst": "none",
-      "mayActUnattended": [
-        "read metadata"
+        "read metadata",
+        "read metrics",
+        "apply pending maintenance",
+        "restart",
+        "power off"
       ]
     },
     {
       "serviceId": "analytics-agent",
       "name": "analytics-agent",
       "type": "application",
+      "state": "RUNNING",
       "document": "/agent-context/analytics-agent.json",
+      "explain": "/service-explain/analytics-agent.json",
       "findings": 0,
       "worst": "none",
+      "contextKnown": "0/5",
       "mayActUnattended": [
         "read metadata"
       ]
@@ -164,97 +484,12 @@
       "serviceId": "analytics-agent-pg",
       "name": "analytics-agent-pg",
       "type": "pg",
+      "state": "RUNNING",
       "document": "/agent-context/analytics-agent-pg.json",
+      "explain": "/service-explain/analytics-agent-pg.json",
       "findings": 0,
       "worst": "none",
-      "mayActUnattended": [
-        "read metadata"
-      ]
-    },
-    {
-      "serviceId": "dashboard-api",
-      "name": "dashboard-api",
-      "type": "application",
-      "document": "/agent-context/dashboard-api.json",
-      "findings": 0,
-      "worst": "none",
-      "mayActUnattended": [
-        "read metadata"
-      ]
-    },
-    {
-      "serviceId": "dashboard-web",
-      "name": "dashboard-web",
-      "type": "application",
-      "document": "/agent-context/dashboard-web.json",
-      "findings": 0,
-      "worst": "none",
-      "mayActUnattended": [
-        "read metadata"
-      ]
-    },
-    {
-      "serviceId": "lightdash",
-      "name": "lightdash",
-      "type": "application",
-      "document": "/agent-context/lightdash.json",
-      "findings": 0,
-      "worst": "none",
-      "mayActUnattended": [
-        "read metadata"
-      ]
-    },
-    {
-      "serviceId": "pg-lightdash",
-      "name": "pg-lightdash",
-      "type": "pg",
-      "document": "/agent-context/pg-lightdash.json",
-      "findings": 0,
-      "worst": "none",
-      "mayActUnattended": [
-        "read metadata"
-      ]
-    },
-    {
-      "serviceId": "datahub-mcp",
-      "name": "datahub-mcp",
-      "type": "application",
-      "document": "/agent-context/datahub-mcp.json",
-      "findings": 0,
-      "worst": "none",
-      "mayActUnattended": [
-        "read metadata"
-      ]
-    },
-    {
-      "serviceId": "datahub-connection-wizard",
-      "name": "datahub-connection-wizard",
-      "type": "application",
-      "document": "/agent-context/datahub-connection-wizard.json",
-      "findings": 0,
-      "worst": "none",
-      "mayActUnattended": [
-        "read metadata"
-      ]
-    },
-    {
-      "serviceId": "managed-agents-e55f68a7-runtime",
-      "name": "managed-agents-e55f68a7-runtime",
-      "type": "application",
-      "document": "/agent-context/managed-agents-e55f68a7-runtime.json",
-      "findings": 0,
-      "worst": "none",
-      "mayActUnattended": [
-        "read metadata"
-      ]
-    },
-    {
-      "serviceId": "managed-agents-e55f68a7-db",
-      "name": "managed-agents-e55f68a7-db",
-      "type": "pg",
-      "document": "/agent-context/managed-agents-e55f68a7-db.json",
-      "findings": 0,
-      "worst": "none",
+      "contextKnown": "0/5",
       "mayActUnattended": [
         "read metadata"
       ]
@@ -263,9 +498,12 @@
       "serviceId": "crm-app",
       "name": "crm-app",
       "type": "application",
+      "state": "RUNNING",
       "document": "/agent-context/crm-app.json",
+      "explain": "/service-explain/crm-app.json",
       "findings": 0,
       "worst": "none",
+      "contextKnown": "1/5",
       "mayActUnattended": [
         "read metadata"
       ]
@@ -274,43 +512,54 @@
       "serviceId": "crm-sql",
       "name": "crm-sql",
       "type": "application",
+      "state": "RUNNING",
       "document": "/agent-context/crm-sql.json",
+      "explain": "/service-explain/crm-sql.json",
       "findings": 0,
       "worst": "none",
+      "contextKnown": "1/5",
       "mayActUnattended": [
         "read metadata"
       ]
     },
     {
-      "serviceId": "crm-pg",
-      "name": "crm-pg",
-      "type": "pg",
-      "document": "/agent-context/crm-pg.json",
-      "findings": 6,
-      "worst": "danger",
-      "mayActUnattended": [
-        "read metadata",
-        "read metrics"
-      ]
-    },
-    {
-      "serviceId": "datahub-1c8ec127-frontend",
-      "name": "datahub-1c8ec127-frontend",
+      "serviceId": "dashboard-api",
+      "name": "dashboard-api",
       "type": "application",
-      "document": "/agent-context/datahub-1c8ec127-frontend.json",
+      "state": "RUNNING",
+      "document": "/agent-context/dashboard-api.json",
+      "explain": "/service-explain/dashboard-api.json",
       "findings": 0,
       "worst": "none",
+      "contextKnown": "0/5",
       "mayActUnattended": [
         "read metadata"
       ]
     },
     {
-      "serviceId": "datahub-1c8ec127-gms",
-      "name": "datahub-1c8ec127-gms",
+      "serviceId": "dashboard-web",
+      "name": "dashboard-web",
       "type": "application",
-      "document": "/agent-context/datahub-1c8ec127-gms.json",
+      "state": "RUNNING",
+      "document": "/agent-context/dashboard-web.json",
+      "explain": "/service-explain/dashboard-web.json",
       "findings": 0,
       "worst": "none",
+      "contextKnown": "0/5",
+      "mayActUnattended": [
+        "read metadata"
+      ]
+    },
+    {
+      "serviceId": "datahub-1c8ec127",
+      "name": "datahub-1c8ec127",
+      "type": "datahub",
+      "state": "RUNNING",
+      "document": "/agent-context/datahub-1c8ec127.json",
+      "explain": "/service-explain/datahub-1c8ec127.json",
+      "findings": 0,
+      "worst": "none",
+      "contextKnown": "0/5",
       "mayActUnattended": [
         "read metadata"
       ]
@@ -319,20 +568,40 @@
       "serviceId": "datahub-1c8ec127-actions",
       "name": "datahub-1c8ec127-actions",
       "type": "application",
+      "state": "RUNNING",
       "document": "/agent-context/datahub-1c8ec127-actions.json",
+      "explain": "/service-explain/datahub-1c8ec127-actions.json",
       "findings": 0,
       "worst": "none",
+      "contextKnown": "0/5",
       "mayActUnattended": [
         "read metadata"
       ]
     },
     {
-      "serviceId": "datahub-1c8ec127-upgrade",
-      "name": "datahub-1c8ec127-upgrade",
+      "serviceId": "datahub-1c8ec127-frontend",
+      "name": "datahub-1c8ec127-frontend",
       "type": "application",
-      "document": "/agent-context/datahub-1c8ec127-upgrade.json",
+      "state": "RUNNING",
+      "document": "/agent-context/datahub-1c8ec127-frontend.json",
+      "explain": "/service-explain/datahub-1c8ec127-frontend.json",
       "findings": 0,
       "worst": "none",
+      "contextKnown": "0/5",
+      "mayActUnattended": [
+        "read metadata"
+      ]
+    },
+    {
+      "serviceId": "datahub-1c8ec127-gms",
+      "name": "datahub-1c8ec127-gms",
+      "type": "application",
+      "state": "RUNNING",
+      "document": "/agent-context/datahub-1c8ec127-gms.json",
+      "explain": "/service-explain/datahub-1c8ec127-gms.json",
+      "findings": 0,
+      "worst": "none",
+      "contextKnown": "0/5",
       "mayActUnattended": [
         "read metadata"
       ]
@@ -341,9 +610,12 @@
       "serviceId": "datahub-1c8ec127-kafka",
       "name": "datahub-1c8ec127-kafka",
       "type": "kafka",
+      "state": "RUNNING",
       "document": "/agent-context/datahub-1c8ec127-kafka.json",
+      "explain": "/service-explain/datahub-1c8ec127-kafka.json",
       "findings": 0,
       "worst": "none",
+      "contextKnown": "1/5",
       "mayActUnattended": [
         "read metadata"
       ]
@@ -352,9 +624,12 @@
       "serviceId": "datahub-1c8ec127-opensearch",
       "name": "datahub-1c8ec127-opensearch",
       "type": "opensearch",
+      "state": "RUNNING",
       "document": "/agent-context/datahub-1c8ec127-opensearch.json",
+      "explain": "/service-explain/datahub-1c8ec127-opensearch.json",
       "findings": 0,
       "worst": "none",
+      "contextKnown": "0/5",
       "mayActUnattended": [
         "read metadata"
       ]
@@ -363,20 +638,197 @@
       "serviceId": "datahub-1c8ec127-postgresql",
       "name": "datahub-1c8ec127-postgresql",
       "type": "pg",
+      "state": "RUNNING",
       "document": "/agent-context/datahub-1c8ec127-postgresql.json",
+      "explain": "/service-explain/datahub-1c8ec127-postgresql.json",
       "findings": 0,
       "worst": "none",
+      "contextKnown": "0/5",
       "mayActUnattended": [
         "read metadata"
       ]
     },
     {
-      "serviceId": "os-ddec4cf-dhtest",
-      "name": "os-ddec4cf-dhtest",
-      "type": "opensearch",
-      "document": "/agent-context/os-ddec4cf-dhtest.json",
+      "serviceId": "datahub-1c8ec127-upgrade",
+      "name": "datahub-1c8ec127-upgrade",
+      "type": "application",
+      "state": "POWEROFF",
+      "document": "/agent-context/datahub-1c8ec127-upgrade.json",
+      "explain": "/service-explain/datahub-1c8ec127-upgrade.json",
       "findings": 0,
       "worst": "none",
+      "contextKnown": "0/5",
+      "mayActUnattended": [
+        "read metadata"
+      ]
+    },
+    {
+      "serviceId": "datahub-connection-wizard",
+      "name": "datahub-connection-wizard",
+      "type": "application",
+      "state": "RUNNING",
+      "document": "/agent-context/datahub-connection-wizard.json",
+      "explain": "/service-explain/datahub-connection-wizard.json",
+      "findings": 0,
+      "worst": "none",
+      "contextKnown": "0/5",
+      "mayActUnattended": [
+        "read metadata"
+      ]
+    },
+    {
+      "serviceId": "datahub-mcp",
+      "name": "datahub-mcp",
+      "type": "application",
+      "state": "RUNNING",
+      "document": "/agent-context/datahub-mcp.json",
+      "explain": "/service-explain/datahub-mcp.json",
+      "findings": 0,
+      "worst": "none",
+      "contextKnown": "0/5",
+      "mayActUnattended": [
+        "read metadata"
+      ]
+    },
+    {
+      "serviceId": "kafkaconnect-30e121dd",
+      "name": "kafkaconnect-30e121dd",
+      "type": "kafka_connect",
+      "state": "RUNNING",
+      "environment": "production",
+      "criticality": "important",
+      "document": "/agent-context/kafkaconnect-30e121dd.json",
+      "explain": "/service-explain/kafkaconnect-30e121dd.json",
+      "findings": 0,
+      "worst": "none",
+      "contextKnown": "3/5",
+      "mayActUnattended": [
+        "read connector status",
+        "read metrics"
+      ]
+    },
+    {
+      "serviceId": "lightdash",
+      "name": "lightdash",
+      "type": "application",
+      "state": "RUNNING",
+      "document": "/agent-context/lightdash.json",
+      "explain": "/service-explain/lightdash.json",
+      "findings": 0,
+      "worst": "none",
+      "contextKnown": "0/5",
+      "mayActUnattended": [
+        "read metadata"
+      ]
+    },
+    {
+      "serviceId": "managed-agents-e55f68a7-db",
+      "name": "managed-agents-e55f68a7-db",
+      "type": "pg",
+      "state": "RUNNING",
+      "document": "/agent-context/managed-agents-e55f68a7-db.json",
+      "explain": "/service-explain/managed-agents-e55f68a7-db.json",
+      "findings": 0,
+      "worst": "none",
+      "contextKnown": "0/5",
+      "mayActUnattended": [
+        "read metadata"
+      ]
+    },
+    {
+      "serviceId": "managed-agents-e55f68a7-runtime",
+      "name": "managed-agents-e55f68a7-runtime",
+      "type": "application",
+      "state": "RUNNING",
+      "document": "/agent-context/managed-agents-e55f68a7-runtime.json",
+      "explain": "/service-explain/managed-agents-e55f68a7-runtime.json",
+      "findings": 0,
+      "worst": "none",
+      "contextKnown": "0/5",
+      "mayActUnattended": [
+        "read metadata"
+      ]
+    },
+    {
+      "serviceId": "marmot-catalog",
+      "name": "marmot-catalog",
+      "type": "application",
+      "state": "RUNNING",
+      "document": "/agent-context/marmot-catalog.json",
+      "explain": "/service-explain/marmot-catalog.json",
+      "findings": 0,
+      "worst": "none",
+      "contextKnown": "0/5",
+      "mayActUnattended": [
+        "read metadata"
+      ]
+    },
+    {
+      "serviceId": "pg-lightdash",
+      "name": "pg-lightdash",
+      "type": "pg",
+      "state": "POWEROFF",
+      "document": "/agent-context/pg-lightdash.json",
+      "explain": "/service-explain/pg-lightdash.json",
+      "findings": 0,
+      "worst": "none",
+      "contextKnown": "0/5",
+      "mayActUnattended": [
+        "read metadata"
+      ]
+    },
+    {
+      "serviceId": "trino-hub",
+      "name": "trino-hub",
+      "type": "application",
+      "state": "RUNNING",
+      "document": "/agent-context/trino-hub.json",
+      "explain": "/service-explain/trino-hub.json",
+      "findings": 0,
+      "worst": "none",
+      "contextKnown": "0/5",
+      "mayActUnattended": [
+        "read metadata"
+      ]
+    },
+    {
+      "serviceId": "trino2",
+      "name": "trino2",
+      "type": "application",
+      "state": "RUNNING",
+      "document": "/agent-context/trino2.json",
+      "explain": "/service-explain/trino2.json",
+      "findings": 0,
+      "worst": "none",
+      "contextKnown": "0/5",
+      "mayActUnattended": [
+        "read metadata"
+      ]
+    },
+    {
+      "serviceId": "trino2-pg",
+      "name": "trino2-pg",
+      "type": "pg",
+      "state": "POWEROFF",
+      "document": "/agent-context/trino2-pg.json",
+      "explain": "/service-explain/trino2-pg.json",
+      "findings": 0,
+      "worst": "none",
+      "contextKnown": "0/5",
+      "mayActUnattended": [
+        "read metadata"
+      ]
+    },
+    {
+      "serviceId": "webshop-simulator",
+      "name": "webshop-simulator",
+      "type": "application",
+      "state": "RUNNING",
+      "document": "/agent-context/webshop-simulator.json",
+      "explain": "/service-explain/webshop-simulator.json",
+      "findings": 0,
+      "worst": "none",
+      "contextKnown": "0/5",
       "mayActUnattended": [
         "read metadata"
       ]

@@ -1,0 +1,286 @@
+{
+  "serviceId": "datahub-1c8ec127-postgresql",
+  "name": "datahub-1c8ec127-postgresql",
+  "type": "pg",
+  "coverage": {
+    "facts": false,
+    "metrics": false,
+    "classified": false,
+    "policy": false,
+    "contact": false
+  },
+  "objectives": [
+    {
+      "id": "disk-headroom",
+      "appliesTo": [
+        "*"
+      ],
+      "title": "At least a quarter of a year of disk runway",
+      "target": 90,
+      "unit": "days to full",
+      "breach": 30,
+      "rationale": "Ninety days is long enough to plan a plan change into a maintenance window and get it approved. Thirty is short enough that the window is now, because on a single node growing the disk is an outage that has to be scheduled with whoever depends on it.",
+      "owner": "Data platform team",
+      "reviewed": "2026-09-08"
+    },
+    {
+      "id": "evidence-freshness",
+      "appliesTo": [
+        "*"
+      ],
+      "title": "Evidence no more than a day behind the snapshot it arrived in",
+      "target": 24,
+      "unit": "hours behind capture",
+      "rationale": "A capacity claim is worth exactly as much as the reading under it. A day is the point where a trend computed from the numbers stops describing the service as it is now, and an agent acting on it is acting on history.",
+      "owner": "Data platform team",
+      "reviewed": "2026-09-08"
+    },
+    {
+      "id": "cpu-spike",
+      "appliesTo": [
+        "*"
+      ],
+      "title": "A peak worth naming",
+      "target": 50,
+      "unit": "percent peak",
+      "rationale": "Below half a core-equivalent nothing is worth reporting. This decides only whether a spike gets mentioned, never whether anything is done about it.",
+      "owner": "Data platform team",
+      "reviewed": "2026-09-08"
+    },
+    {
+      "id": "cpu-sustained",
+      "appliesTo": [
+        "*"
+      ],
+      "title": "Sustained load, as opposed to bursts",
+      "target": 20,
+      "unit": "percent average",
+      "rationale": "Under a fifth on average, a high peak is a query arriving rather than a service running out of room. The pair matters because resizing on a peak is the most common expensive mistake available here.",
+      "owner": "Data platform team",
+      "reviewed": "2026-09-08"
+    },
+    {
+      "id": "downsize-headroom",
+      "appliesTo": [
+        "*"
+      ],
+      "title": "A smaller plan must still leave a third of its disk free",
+      "target": 67,
+      "unit": "percent of the smaller disk in use",
+      "rationale": "The saving is worth having and the second migration is not. Moving down to a rung that is already two-thirds full buys a few pounds a month and a disk-full incident a quarter later, which costs more than the plan ever saved. A third free is the margin that makes the move a decision rather than a bet on growth stopping.",
+      "owner": "Data platform team",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "downsize-utilisation",
+      "appliesTo": [
+        "*"
+      ],
+      "title": "Peaks well inside the plan before shrinking it",
+      "target": 60,
+      "unit": "percent peak of any resource",
+      "rationale": "Averages are what make downsizing look free: a service at five percent mean CPU that touches sixty-five under load will meet that load on a smaller plan too, and meet it worse. The peak is the number the plan actually has to survive, so it is the one that decides.",
+      "owner": "Data platform team",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "backup-freshness",
+      "appliesTo": [
+        "*"
+      ],
+      "title": "A restore point from within the last two days",
+      "target": 48,
+      "unit": "hours since the last backup",
+      "breach": 168,
+      "rationale": "Aiven takes daily backups, so two days allows one to fail without raising anything. A week means the restore point has quietly moved from yesterday to last Tuesday, which is only discovered at the worst possible moment.",
+      "owner": "Data platform team",
+      "reviewed": "2026-09-15"
+    }
+  ],
+  "captured": {
+    "catalog": "2026-09-07T07:20:00Z",
+    "serviceFacts": "2026-09-07T07:20:00Z",
+    "metrics": "2026-09-08T10:55:00Z",
+    "connectors": "2026-09-08T10:58:00Z",
+    "purposeLog": "2026-09-04T12:05:41.806Z",
+    "policy": "authored, not captured"
+  },
+  "policy": {
+    "serviceId": "datahub-1c8ec127-postgresql",
+    "allowed": [
+      "read metadata"
+    ],
+    "needsApproval": [],
+    "forbidden": [
+      "everything else"
+    ],
+    "because": "No policy has been written for this service, so it is read-only until somebody writes one.",
+    "basis": "unclassified, so the most cautious setting rather than a convenient one"
+  },
+  "freeze": {
+    "active": true,
+    "from": "2026-09-08T00:00:00Z",
+    "to": "2026-09-12T23:59:59Z",
+    "reason": "Data Innovation Summit. The project is on stage, so nothing changes unattended, however good the reason."
+  },
+  "owners": [],
+  "contacts": [],
+  "ownership": "Nobody has been declared as an owner here, so the names below are observed rather than responsible: Marmot's asset_owners and teams tables are empty, and these are the people Aiven lists as contacts and the people the event log shows changing this service.",
+  "findings": [],
+  "readings": [],
+  "dependents": {
+    "datasets": 0,
+    "downstreamAssets": [],
+    "downstreamServices": [],
+    "credentialHolders": [],
+    "stacks": [
+      "DataHub 1c8ec127"
+    ]
+  },
+  "plan": {
+    "options": [],
+    "downsize": {
+      "verdict": "cannot tell",
+      "because": "No service facts were captured here, so there is no current plan to compare a smaller one against."
+    },
+    "note": "No service facts were captured here, so there is no plan to price a fix against."
+  },
+  "lifecycle": {
+    "state": "RUNNING",
+    "stateReadAt": "2026-09-07T07:20:00Z",
+    "stateMeans": "Serving traffic. Normal, and the only state in which most changes are safe to attempt.",
+    "updates": [],
+    "note": "No facts were captured for this service, so its state is whatever the catalog last recorded and its queue is unknown."
+  },
+  "descriptionReview": {
+    "author": "the catalog snapshot",
+    "at": "2026-09-15",
+    "state": "accepted",
+    "sources": [
+      "this catalog, authored when the project was walked"
+    ]
+  },
+  "deviations": [
+    {
+      "id": "pg-no-hba",
+      "serviceTypes": [
+        "pg"
+      ],
+      "kind": "not configurable",
+      "title": "There is no pg_hba.conf to edit",
+      "detail": "Host-based authentication is managed by the platform and not exposed. Network access is the service IP filter, and everything else is roles and grants inside the database. An agent reasoning from upstream Postgres will reach for the file first, and the file is not there.",
+      "docUrl": "https://aiven.io/docs/platform/howto/restrict-access",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "pg-no-superuser",
+      "serviceTypes": [
+        "pg"
+      ],
+      "kind": "differs from upstream",
+      "title": "avnadmin is not a superuser",
+      "detail": "The administrative account has most privileges but not superuser, so anything requiring it fails: ALTER SYSTEM, untrusted procedural languages, and a handful of extensions. Server settings change through the service configuration API instead, which applies them the supported way and survives the next node rebuild.",
+      "docUrl": "https://aiven.io/docs/tools/api",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "pg-extensions",
+      "serviceTypes": [
+        "pg"
+      ],
+      "kind": "not configurable",
+      "title": "Extensions come from a supported list, and some are not installed by CREATE EXTENSION",
+      "detail": "Only extensions Aiven packages are available, and several need enabling through service configuration rather than SQL. \"It is on PGXN\" is not a reason it can be installed here. Georg Traar named this as one of the deviations that is barely documented anywhere the customer can see.",
+      "docUrl": "https://aiven.io/docs/products/postgresql/reference/list-of-extensions",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "pg-connection-reserve",
+      "serviceTypes": [
+        "pg"
+      ],
+      "kind": "differs from upstream",
+      "title": "Not all of max_connections is yours",
+      "detail": "The platform reserves connections for its own monitoring, backup and maintenance users, so a service reporting 100 gives the application slightly fewer. Connection pooling is a managed feature rather than something installed on the node.",
+      "docUrl": "https://aiven.io/docs/products/postgresql/reference/pg-connection-limits",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "auto-updates",
+      "serviceTypes": [
+        "*"
+      ],
+      "kind": "managed automatically",
+      "title": "Minor versions and platform software update themselves",
+      "detail": "Security patches and minor version upgrades are applied in the maintenance window without being requested. A version changing between two readings of this catalog is expected behaviour rather than an incident, which is worth knowing before an agent opens one.",
+      "docUrl": "https://aiven.io/docs/platform/concepts/maintenance-window",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "platform-agents",
+      "serviceTypes": [
+        "*"
+      ],
+      "kind": "managed automatically",
+      "title": "Aiven software runs on the nodes alongside yours",
+      "detail": "Monitoring, backup and orchestration processes run on every service, hold their own database connections, and appear in statistics as sessions and queries nobody in your team wrote. Customers are not generally aware of this, so the unexplained connection is usually ours.",
+      "docUrl": "https://aiven.io/docs/platform/concepts/service-power-cycle",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "rebuild-not-edit",
+      "serviceTypes": [
+        "*"
+      ],
+      "kind": "differs from upstream",
+      "title": "Many changes replace the nodes rather than modify them",
+      "detail": "A plan change or a maintenance update generally builds new nodes and moves service to them, so node names change and anything pinned to a host or an IP breaks. This is why a plan change on a single-node service is downtime rather than a resize.",
+      "docUrl": "https://aiven.io/docs/platform/howto/scale-services",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "disk-without-plan",
+      "serviceTypes": [
+        "*"
+      ],
+      "kind": "differs from upstream",
+      "title": "Disk can sometimes grow without a plan change",
+      "detail": "On plans that support it, storage is added to the running service, which makes \"we are running out of disk\" a smaller problem here than the upstream instinct of provisioning a bigger machine. Whether this service is one of them is in the plan block.",
+      "docUrl": "https://aiven.io/docs/platform/concepts/dynamic-disk-sizing",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "backup-is-fork",
+      "serviceTypes": [
+        "*"
+      ],
+      "kind": "differs from upstream",
+      "title": "Restoring means forking to a new service",
+      "detail": "Backups are not restored in place. The supported path creates a new service at a point in time, which you then move traffic to — so a restore is a migration with a connection-string change, not an afternoon of pg_restore. Worth knowing before promising a rollback that assumes otherwise.",
+      "docUrl": "https://aiven.io/docs/platform/howto/console-fork-service",
+      "reviewed": "2026-09-15"
+    }
+  ],
+  "summary": "datahub-1c8ec127-postgresql is PostgreSQL, currently RUNNING, not classified, so it is treated as production. DataHub metadata DB. Nothing under it is catalogued, so there is no data inventory to reason about. Nothing downstream depends on it. No findings against it. Unattended, an agent may read metadata. Forbidden: everything else. A change freeze is in force: Data Innovation Summit. The project is on stage, so nothing changes unattended, however good the reason. Policy basis: unclassified, so the most cautious setting rather than a convenient one.",
+  "data": {
+    "datasets": 0,
+    "columns": 0,
+    "assets": [],
+    "note": "Descriptions and tags as catalogued. Edits made in the browser live in that browser and are not in this file."
+  },
+  "lineage": {
+    "upstreamServices": [],
+    "downstreamServices": [],
+    "reachesEventually": [],
+    "inbound": [],
+    "outbound": [],
+    "internalHops": 0,
+    "integrations": [],
+    "note": "Lineage is catalogued from connector configuration and schemas, not traced at runtime. A `dataset` confidence means the tables are known to be connected without the column mapping being read."
+  },
+  "boundaries": {
+    "doNotRead": [],
+    "handleCarefully": [],
+    "note": "These come from the data, and apply to reads. What may be done to the service itself is in `policy`, and an operation absent from all three of its lists is one nobody has considered: treat it as forbidden."
+  }
+}

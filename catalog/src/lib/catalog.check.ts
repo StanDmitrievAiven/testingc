@@ -3,6 +3,8 @@
 // Imports the snapshot only, not lib/catalog.ts, which uses `@/` aliases node cannot resolve.
 import assert from 'node:assert/strict'
 import { catalog, folderDescriptions } from '../data/catalog.ts'
+import { behaviourTags, knownOwners, observedPeople, resolveOwners, searchAll, treeAncestors } from './catalog.ts'
+import { setOwners } from './catalog-edits.ts'
 import { reachable } from './graph-math.ts'
 
 // The deliverable: nothing in the catalog is left undescribed. An empty string counts as missing,
@@ -209,5 +211,123 @@ assert.ok(
   bare.every((asset) => asset.columns.length === 0 && /No keys and no column list/.test(asset.description)),
   'the unrelated tables say why they are empty',
 )
+
+// Search has to find things by what they are, not only by what they are called — the case that
+// prompted it being a set of topics named F1_2. So each route in is pinned: a description, a tag, a
+// column, a contact. And each hit has to report the field it matched on, because a search that
+// cannot say why it returned something is asking the reader to guess.
+assert.deepEqual(
+  searchAll('postgresconnector').assets.map((hit) => [hit.item.name, hit.why]),
+  [['webshop-pg-cdc', 'description']],
+  'a word that appears only in a description must still find its asset, and say that is where it matched',
+)
+assert.ok(
+  searchAll('email').columns.some((hit) => hit.item.column.name === 'email' && hit.why === 'name'),
+  'columns are searchable in their own right: the answer to "where are the email addresses" is a column',
+)
+assert.equal(
+  searchAll('stan.dmitriev').services.map((hit) => `${hit.item.id} ${hit.why}`).join(),
+  'pg-37c7de3b contact',
+  'searching for a person finds the service they are the contact for',
+)
+
+// `tag:` filters across services, which is how a sensitivity question stops being a project tour.
+const blocked = searchAll('tag:agent-blocked')
+assert.equal(blocked.assets.length, 4, 'four assets hold credentials an agent must not read')
+assert.ok(
+  blocked.assets.every((hit) => hit.tags.includes('agent-blocked') && hit.why === 'tag: agent-blocked'),
+  'a tag filter must return only tagged things, and say the tag is why',
+)
+assert.ok(
+  blocked.assets.every((hit) => hit.tags.some((tag) => behaviourTags.includes(tag))),
+  'a result carries the tags that change behaviour, so it warns before it is opened rather than after',
+)
+assert.equal(searchAll('tag:pi').assets.length, searchAll('tag:pii').assets.length, 'a partial tag matches while typing')
+assert.equal(searchAll('tag:nonexistent-tag').assets.length, 0, 'an unknown tag matches nothing rather than everything')
+
+// Name matches must outrank the rest, or every result reads as a description hit.
+const named = searchAll('customers')
+assert.ok(
+  named.assets.filter((hit) => hit.item.name === 'customers').every((hit) => hit.why === 'name'),
+  'a hit on the name reports as a name',
+)
+for (const hits of [searchAll('pg').services, searchAll('order').assets]) {
+  assert.equal(new Set(hits.map((hit) => JSON.stringify(hit.item))).size, hits.length, 'no result appears twice')
+}
+
+// Ownership. Inheritance is the whole feature: without it, owning ninety-four tables means ninety-
+// four edits, which is why the ownership field in most catalogs is empty. So the fallback up the
+// tree is what gets pinned, along with the part that keeps it honest — saying where it came from.
+assert.deepEqual(
+  catalog.assets.filter((asset) => treeAncestors(asset.id).length === 0).map((a) => a.id),
+  [],
+  'every asset is reachable in the tree, which is what inheritance walks',
+)
+
+let store: Record<string, string> = {}
+Object.assign(globalThis, {
+  localStorage: {
+    getItem: (key: string) => store[key] ?? null,
+    setItem: (key: string, value: string) => {
+      store[key] = value
+    },
+  },
+  window: { dispatchEvent: () => true },
+})
+
+assert.deepEqual(resolveOwners('pg.public.orders'), { owners: [] }, 'nothing is owned until somebody says so')
+
+setOwners('pg-37c7de3b', [{ name: 'Webshop Team', kind: 'group' }])
+assert.deepEqual(
+  resolveOwners('pg.public.orders'),
+  { owners: [{ name: 'Webshop Team', kind: 'group' }], inheritedFrom: 'pg-37c7de3b' },
+  'a table with no owner belongs to whoever owns its service, and says so',
+)
+
+// The nearest owner wins rather than accumulating: "who do I tell" has one answer, and a schema
+// owner sitting between the table and the service is the more specific one.
+setOwners('pg-37c7de3b:public', [{ name: 'Orders Squad', kind: 'group' }])
+assert.deepEqual(resolveOwners('pg.public.orders'), {
+  owners: [{ name: 'Orders Squad', kind: 'group' }],
+  inheritedFrom: 'pg-37c7de3b:public',
+})
+assert.equal(resolveOwners('pg.marketing.campaigns').inheritedFrom, 'pg-37c7de3b', 'a sibling schema is unaffected')
+
+setOwners('pg.public.orders', [{ name: 'ana@example.com', kind: 'person' }])
+assert.deepEqual(
+  resolveOwners('pg.public.orders'),
+  { owners: [{ name: 'ana@example.com', kind: 'person' }] },
+  'an owner set here overrides the schema, and is not marked as inherited',
+)
+assert.equal(resolveOwners('pg-37c7de3b').inheritedFrom, undefined, 'a service is the top, so it inherits nothing')
+
+// Searching by owner has to follow inheritance too, or "what does this team own" answers with the
+// one schema they were assigned and none of the tables under it.
+const owned = searchAll('owner:orders squad')
+assert.ok(
+  owned.assets.some((hit) => hit.item.id === 'pg.public.order_items' && hit.why.includes('via public')),
+  'inherited ownership is found, and reported as inherited rather than as a direct claim',
+)
+assert.ok(
+  !owned.assets.some((hit) => hit.item.id === 'pg.public.orders'),
+  'a table with its own owner is not returned for the schema owner it overrode',
+)
+assert.equal(owned.columns.length, 0, 'columns have no owner of their own, so an owner search skips them')
+assert.equal(searchAll('owner:nobody at all').assets.length, 0, 'an unknown owner matches nothing')
+assert.ok(
+  searchAll('ana@example.com').assets.some((hit) => hit.item.id === 'pg.public.orders'),
+  'an owner is findable without the prefix, since that is how a name gets pasted into a search box',
+)
+
+assert.deepEqual(
+  knownOwners().map((owner) => owner.name),
+  ['ana@example.com', 'Orders Squad', 'Webshop Team'],
+  'everyone already named is offered as a suggestion, so the second assignment is a click',
+)
+assert.ok(
+  observedPeople().every((person) => person.name.includes('@') && person.kind === 'person'),
+  'observed suggestions are addresses of people, never platform actors',
+)
+store = {}
 
 console.log(`catalog: ok (${catalog.assets.length} assets, ${catalog.assets.reduce((n, a) => n + a.columns.length, 0)} columns, ${Object.keys(folderDescriptions).length} folders, ${catalog.lineage.length} lineage edges)`)

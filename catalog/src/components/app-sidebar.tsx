@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import {
+  AlertTriangleIcon,
   AppWindowIcon,
   BoxIcon,
   ChevronRightIcon,
@@ -12,6 +13,7 @@ import { CatalogTree } from '@/components/catalog-tree'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { catalog } from '@/data/catalog'
 import { catalogTree, isRuntime, managedServices, runtimes, treeAncestors, type TreeNode } from '@/lib/catalog'
+import { fleetRows } from '@/lib/fleet'
 import type { Navigate, Route } from '@/lib/routes'
 import { cn } from '@/lib/utils'
 import {
@@ -49,6 +51,9 @@ export function AppSidebar({
   const page = route.page
   const services = useMemo(() => catalogTree(managedServices()), [])
   const apps = useMemo(() => catalogTree(runtimes()), [])
+  // The badge is the count worth acting on, not the total: every service has a document, and most
+  // of them say "nothing to see", which is not a number anybody needs in a sidebar.
+  const attention = useMemo(() => fleetRows().filter((row) => row.worst?.severity === 'danger').length, [])
   const selectedId = selectedIdFor(route)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   // Branches the user opened stay open. The path *to* the selection is revealed as well,
@@ -114,6 +119,13 @@ export function AppSidebar({
                 <SidebarMenuButton isActive={page === 'overview'} onClick={() => navigate({ page: 'overview' })}>
                   <LayoutGridIcon />
                   <span>Overview</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton isActive={page === 'fleet'} onClick={() => navigate({ page: 'fleet' })}>
+                  <AlertTriangleIcon />
+                  <span>Fleet</span>
+                  {attention ? <SidebarMenuBadge>{attention}</SidebarMenuBadge> : null}
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>

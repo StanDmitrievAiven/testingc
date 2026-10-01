@@ -1,0 +1,188 @@
+{
+  "assetId": "pg.public.customers",
+  "name": "customers",
+  "qualifiedName": "pg-37c7de3b.public.customers",
+  "kind": "table",
+  "serviceId": "pg-37c7de3b",
+  "serviceName": "pg-37c7de3b",
+  "serviceType": "PostgreSQL",
+  "description": "Webshop customers. Source of CDC topic webshop.public.customers.",
+  "descriptionReview": {
+    "author": "the catalog snapshot",
+    "at": "2026-09-15",
+    "state": "accepted",
+    "sources": [
+      "this catalog, authored when the project was walked"
+    ]
+  },
+  "owners": [],
+  "tags": [
+    {
+      "tag": "webshop",
+      "meaning": "The webshop order flow: customers, products, orders and line items."
+    },
+    {
+      "tag": "pii",
+      "meaning": "Personal data about identifiable people. Handle under the privacy policy and avoid new copies."
+    },
+    {
+      "tag": "cdc",
+      "meaning": "Captured by change data capture, so every row change is replicated downstream."
+    }
+  ],
+  "columns": [
+    {
+      "name": "id",
+      "type": "bigint",
+      "constraint": "PK",
+      "nullable": false,
+      "note": "Surrogate key; orders.customer_id points here"
+    },
+    {
+      "name": "email",
+      "type": "text",
+      "constraint": "UQ",
+      "nullable": false,
+      "note": "Contact address, and the key the loader upserts on"
+    },
+    {
+      "name": "name",
+      "type": "text",
+      "nullable": false,
+      "note": "Customer full name; personal data"
+    },
+    {
+      "name": "region",
+      "type": "text",
+      "nullable": false,
+      "note": "Sales region, the grain campaigns are targeted at"
+    },
+    {
+      "name": "country",
+      "type": "text",
+      "nullable": false,
+      "note": "Country within the region"
+    },
+    {
+      "name": "created_at",
+      "type": "timestamptz",
+      "nullable": false,
+      "note": "Insert time, set by the database"
+    },
+    {
+      "name": "updated_at",
+      "type": "timestamptz",
+      "nullable": false,
+      "note": "Last write; no UPDATE of this table was captured, so it tracks created_at"
+    }
+  ],
+  "facts": [
+    {
+      "what": "Rows",
+      "value": "895,294",
+      "origin": "captured",
+      "source": "this catalog, from the service schema"
+    },
+    {
+      "what": "Columns",
+      "value": "7",
+      "origin": "captured",
+      "source": "this catalog, from the service schema"
+    },
+    {
+      "what": "Last write",
+      "value": "Unknown. No tool read for this project reports a last-write or last-produce time.",
+      "origin": "derived",
+      "source": "the set of tools read for this project"
+    }
+  ],
+  "findings": [
+    {
+      "kind": "sensitivity",
+      "severity": "caution",
+      "title": "Tagged pii",
+      "detail": "Personal data about identifiable people. Handle under the privacy policy and avoid new copies.",
+      "source": "tags in this catalog"
+    }
+  ],
+  "deletion": {
+    "assetId": "pg.public.customers",
+    "verdict": "unsafe",
+    "because": "Something is using it: 8 catalogued downstream readers, an application writes into it, 1 foreign key points at it, so the drop fails on the constraint, 350,153 recorded calls. Deleting it breaks that, and the break is not reversible by re-creating an empty one.",
+    "evidence": [
+      {
+        "what": "Downstream readers",
+        "found": "8 catalogued hops out: kafka-1b5cb1e7.webshop.public.customers, datahub.datahub-1c8ec127",
+        "source": "this catalog, from connector configuration and schemas"
+      },
+      {
+        "what": "Writers",
+        "found": "Written by application.webshop-simulator",
+        "source": "this catalog, from application configuration"
+      },
+      {
+        "what": "Foreign keys pointing at it",
+        "found": "1 referencing table: pg-37c7de3b.public.orders",
+        "source": "pg_constraint"
+      },
+      {
+        "what": "Recorded statements",
+        "found": "Named by recorded statements, 350,153 calls across the 4 slowest",
+        "source": "pg_stat_statements, all 99 read 2026-09-15"
+      },
+      {
+        "what": "Last write",
+        "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+        "source": "—"
+      }
+    ]
+  },
+  "cost": {
+    "usdPerMonth": 47.83,
+    "share": 0.43391,
+    "basis": "statement time",
+    "method": "43.4% of the total statement time captured on this service, applied to $110.23 a month. It apportions the bill by load rather than measuring what the table costs, and the bill does not fall until the plan does."
+  },
+  "diagnosis": {
+    "assetId": "pg.public.customers",
+    "name": "pg-37c7de3b.public.customers",
+    "chain": [
+      {
+        "assetId": "app.webshop-simulator",
+        "name": "application.webshop-simulator",
+        "serviceId": "webshop-simulator",
+        "serviceName": "webshop-simulator",
+        "distance": 1,
+        "via": "application_service_credential",
+        "health": "unknown",
+        "why": "No facts or metrics were captured for this service, so it cannot be cleared or blamed.",
+        "findings": []
+      }
+    ],
+    "verdict": "Nothing upstream of pg-37c7de3b.public.customers has been captured — 1 hop upstream across 1 services, none of it read — so this cannot tell you anything yet. The chain is drawn; the health is missing.",
+    "freshness": "No hop in this chain measures its own delay, so there is no end-to-end figure. Consumer lag is the only latency this project captures, and there is no Kafka hop here to read it from.",
+    "boundary": "The walk stops where Aiven can see: the last hop inside the platform. Whatever reads the end of this chain — a dashboard, a job, somebody's notebook — is invisible here, and is where a symptom nothing upstream explains usually turns out to live."
+  },
+  "policy": {
+    "serviceId": "pg-37c7de3b",
+    "allowed": [
+      "read metadata",
+      "read metrics",
+      "read query statistics"
+    ],
+    "needsApproval": [
+      "restart",
+      "change plan",
+      "change ip filter",
+      "terminate a session"
+    ],
+    "forbidden": [
+      "delete the service",
+      "drop the replication slot",
+      "disable backups"
+    ],
+    "because": "Single node holding the webshop source of truth, and the CDC connector reads its replication slot: dropping that slot loses changes that no downstream copy can reconstruct.",
+    "basis": "written for this service, overriding what its criticality would give it"
+  },
+  "note": "Descriptions, tags and owners are editable in the browser, and those edits live in that browser rather than in this file. Everything marked captured names the Aiven tool it came from and when it was read."
+}

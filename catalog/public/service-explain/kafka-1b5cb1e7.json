@@ -1,0 +1,1501 @@
+{
+  "serviceId": "kafka-1b5cb1e7",
+  "name": "kafka-1b5cb1e7",
+  "type": "kafka",
+  "coverage": {
+    "facts": true,
+    "metrics": true,
+    "classified": true,
+    "policy": true,
+    "contact": true
+  },
+  "classification": {
+    "serviceId": "kafka-1b5cb1e7",
+    "environment": "production",
+    "criticality": "critical",
+    "provenance": "inferred",
+    "evidence": "The only path between the source database and every downstream copy, and the Schema Registry the consumers read. Nothing is lost if it stops, but everything stops with it, and retention turns a long enough stop into loss."
+  },
+  "objectives": [
+    {
+      "id": "disk-headroom",
+      "appliesTo": [
+        "kafka"
+      ],
+      "title": "At least six weeks of disk runway on a broker",
+      "target": 45,
+      "unit": "days to full",
+      "breach": 21,
+      "rationale": "Shorter than the fleet default on purpose. Broker disk moves with retention rather than with data growth, so a single retention change can consume weeks of runway in an afternoon, and the slow-moving trend is the wrong thing to plan against.",
+      "owner": "Streaming team",
+      "reviewed": "2026-09-08"
+    },
+    {
+      "id": "evidence-freshness",
+      "appliesTo": [
+        "*"
+      ],
+      "title": "Evidence no more than a day behind the snapshot it arrived in",
+      "target": 24,
+      "unit": "hours behind capture",
+      "rationale": "A capacity claim is worth exactly as much as the reading under it. A day is the point where a trend computed from the numbers stops describing the service as it is now, and an agent acting on it is acting on history.",
+      "owner": "Data platform team",
+      "reviewed": "2026-09-08"
+    },
+    {
+      "id": "consumer-lag-headroom",
+      "appliesTo": [
+        "kafka"
+      ],
+      "title": "Consumers no more than halfway through what the topic still keeps",
+      "target": 50,
+      "unit": "percent of retained records",
+      "breach": 80,
+      "rationale": "Retention is the deadline, not the lag itself. At half the retained window there is still a working day to fix the consumer; past eighty percent a single slow afternoon turns delayed records into lost ones, and no amount of catching up brings them back.",
+      "owner": "Streaming team",
+      "reviewed": "2026-09-08"
+    },
+    {
+      "id": "cpu-spike",
+      "appliesTo": [
+        "*"
+      ],
+      "title": "A peak worth naming",
+      "target": 50,
+      "unit": "percent peak",
+      "rationale": "Below half a core-equivalent nothing is worth reporting. This decides only whether a spike gets mentioned, never whether anything is done about it.",
+      "owner": "Data platform team",
+      "reviewed": "2026-09-08"
+    },
+    {
+      "id": "cpu-sustained",
+      "appliesTo": [
+        "*"
+      ],
+      "title": "Sustained load, as opposed to bursts",
+      "target": 20,
+      "unit": "percent average",
+      "rationale": "Under a fifth on average, a high peak is a query arriving rather than a service running out of room. The pair matters because resizing on a peak is the most common expensive mistake available here.",
+      "owner": "Data platform team",
+      "reviewed": "2026-09-08"
+    },
+    {
+      "id": "downsize-headroom",
+      "appliesTo": [
+        "*"
+      ],
+      "title": "A smaller plan must still leave a third of its disk free",
+      "target": 67,
+      "unit": "percent of the smaller disk in use",
+      "rationale": "The saving is worth having and the second migration is not. Moving down to a rung that is already two-thirds full buys a few pounds a month and a disk-full incident a quarter later, which costs more than the plan ever saved. A third free is the margin that makes the move a decision rather than a bet on growth stopping.",
+      "owner": "Data platform team",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "downsize-utilisation",
+      "appliesTo": [
+        "*"
+      ],
+      "title": "Peaks well inside the plan before shrinking it",
+      "target": 60,
+      "unit": "percent peak of any resource",
+      "rationale": "Averages are what make downsizing look free: a service at five percent mean CPU that touches sixty-five under load will meet that load on a smaller plan too, and meet it worse. The peak is the number the plan actually has to survive, so it is the one that decides.",
+      "owner": "Data platform team",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "backup-freshness",
+      "appliesTo": [
+        "*"
+      ],
+      "title": "A restore point from within the last two days",
+      "target": 48,
+      "unit": "hours since the last backup",
+      "breach": 168,
+      "rationale": "Aiven takes daily backups, so two days allows one to fail without raising anything. A week means the restore point has quietly moved from yesterday to last Tuesday, which is only discovered at the worst possible moment.",
+      "owner": "Data platform team",
+      "reviewed": "2026-09-15"
+    }
+  ],
+  "capabilities": {
+    "nodes": 3,
+    "failoverAvailable": true,
+    "diskGb": 90,
+    "source": "aiven_service_get"
+  },
+  "captured": {
+    "catalog": "2026-09-07T07:20:00Z",
+    "serviceFacts": "2026-09-07T07:20:00Z",
+    "metrics": "2026-09-08T10:55:00Z",
+    "connectors": "2026-09-08T10:58:00Z",
+    "purposeLog": "2026-09-04T12:05:41.806Z",
+    "policy": "authored, not captured"
+  },
+  "policy": {
+    "serviceId": "kafka-1b5cb1e7",
+    "allowed": [
+      "read metadata",
+      "read metrics",
+      "read topic configuration",
+      "read consumer lag"
+    ],
+    "needsApproval": [
+      "raise retention",
+      "restart a broker",
+      "add partitions"
+    ],
+    "forbidden": [
+      "delete a topic",
+      "lower retention",
+      "reduce replication factor"
+    ],
+    "because": "Three brokers make a rolling restart survivable, but lowering retention deletes records a lagging consumer has not read yet, and no amount of purpose makes that recoverable.",
+    "basis": "written for this service, overriding what its criticality would give it"
+  },
+  "freeze": {
+    "active": true,
+    "from": "2026-09-08T00:00:00Z",
+    "to": "2026-09-12T23:59:59Z",
+    "reason": "Data Innovation Summit. The project is on stage, so nothing changes unattended, however good the reason."
+  },
+  "owners": [],
+  "contacts": [
+    {
+      "email": "ayesha.ahmad@aiven.io",
+      "why": "Last touched it: changed it 6 times in the event log"
+    }
+  ],
+  "ownership": "Nobody has been declared as an owner here, so the names below are observed rather than responsible: Marmot's asset_owners and teams tables are empty, and these are the people Aiven lists as contacts and the people the event log shows changing this service.",
+  "findings": [
+    {
+      "kind": "open-to-internet",
+      "severity": "danger",
+      "title": "Reachable from 0.0.0.0/0",
+      "detail": "The ip filter allows every address, so the only thing between this service and the internet is its password.",
+      "source": "aiven_service_get",
+      "capturedAt": "2026-09-07T07:20:00Z",
+      "docUrl": "https://aiven.io/docs/platform/howto/restrict-access",
+      "runbook": {
+        "forFinding": "open-to-internet",
+        "title": "Close the service to the open internet",
+        "docUrl": "https://aiven.io/docs/platform/howto/restrict-access",
+        "deviations": [
+          "pg-no-hba"
+        ],
+        "steps": [
+          "List what actually connects: the integrations in this catalog plus any application using a service credential.",
+          "Collect the egress ranges those clients come from. A guess here locks out production.",
+          "Replace the ip_filter with that list using aiven_service_update, leaving 0.0.0.0/0 out.",
+          "Keep your own access in the list, or you lock yourself out along with everyone else."
+        ],
+        "whileItRuns": "Established connections survive. New connections from anything outside the list are refused immediately, which is the whole point and also the risk.",
+        "takes": "Seconds to apply.",
+        "rollback": "Reversible: put the previous filter back with the same call.",
+        "verify": "Connect from an allowed address, then from one that is not. The second attempt must fail, or the filter did not take."
+      }
+    },
+    {
+      "kind": "no-termination-protection",
+      "severity": "info",
+      "title": "Termination protection is off",
+      "detail": "Nothing stands between a deletion call and this service, which is a cheap gap to close.",
+      "source": "aiven_service_get",
+      "capturedAt": "2026-09-07T07:20:00Z",
+      "docUrl": "https://aiven.io/docs/tools/api",
+      "runbook": {
+        "forFinding": "no-termination-protection",
+        "title": "Turn on termination protection",
+        "steps": [
+          "Set termination protection with aiven_service_update."
+        ],
+        "whileItRuns": "Nothing. It is a configuration flag, with no restart.",
+        "takes": "Seconds.",
+        "rollback": "Reversible with the same call, which is exactly why it is worth having on.",
+        "verify": "Read the service back and confirm the flag is set."
+      }
+    }
+  ],
+  "readings": [
+    {
+      "serviceId": "kafka-1b5cb1e7",
+      "metric": "disk_usage",
+      "series": "kafka-1b5cb1e7-7",
+      "min": 1.953,
+      "avg": 2.51,
+      "max": 3.231,
+      "latest": 2.395,
+      "from": "2026-09-01T10:55:00Z",
+      "to": "2026-09-08T10:55:00Z",
+      "staleHours": 0,
+      "trend": {
+        "perDay": 0.06314285714285714,
+        "windowDays": 7,
+        "daysToFull": 1545.7805429864254,
+        "includesInitialLoad": false
+      }
+    },
+    {
+      "serviceId": "kafka-1b5cb1e7",
+      "metric": "cpu_usage",
+      "series": "kafka-1b5cb1e7-8",
+      "min": 14.99,
+      "avg": 16.041,
+      "max": 25.788,
+      "latest": 18.135,
+      "from": "2026-09-01T10:55:00Z",
+      "to": "2026-09-08T10:55:00Z",
+      "staleHours": 0
+    },
+    {
+      "serviceId": "kafka-1b5cb1e7",
+      "metric": "mem_usage",
+      "series": "kafka-1b5cb1e7-9",
+      "min": 71.936,
+      "avg": 73.065,
+      "max": 74.253,
+      "latest": 73.39,
+      "from": "2026-09-01T10:55:00Z",
+      "to": "2026-09-08T10:55:00Z",
+      "staleHours": 0
+    }
+  ],
+  "dependents": {
+    "datasets": 4,
+    "downstreamAssets": [
+      "ch.service_kafka.customers",
+      "ch.service_kafka.products",
+      "ch.service_kafka.orders",
+      "ch.service_kafka.order_items"
+    ],
+    "downstreamServices": [
+      "clickhouse-2a6274d2"
+    ],
+    "credentialHolders": [],
+    "stacks": [
+      "Webshop"
+    ]
+  },
+  "plan": {
+    "options": [],
+    "downsize": {
+      "verdict": "no smaller rung priced",
+      "because": "No plan prices were captured for this service type, so a cheaper rung cannot be priced even if one exists."
+    },
+    "note": "No plan prices were captured for kafka, so a fix here cannot state its cost yet."
+  },
+  "lifecycle": {
+    "state": "RUNNING",
+    "stateReadAt": "2026-09-07T07:20:00Z",
+    "stateMeans": "Serving traffic. Normal, and the only state in which most changes are safe to attempt.",
+    "maintenanceWindow": "tuesday at 10:41:49 UTC",
+    "updates": [],
+    "note": "Nothing is queued as of this capture. Updates appear with little notice, so this is a reading rather than a promise."
+  },
+  "descriptionReview": {
+    "author": "the catalog snapshot",
+    "at": "2026-09-15",
+    "state": "accepted",
+    "sources": [
+      "this catalog, authored when the project was walked"
+    ]
+  },
+  "deviations": [
+    {
+      "id": "auto-updates",
+      "serviceTypes": [
+        "*"
+      ],
+      "kind": "managed automatically",
+      "title": "Minor versions and platform software update themselves",
+      "detail": "Security patches and minor version upgrades are applied in the maintenance window without being requested. A version changing between two readings of this catalog is expected behaviour rather than an incident, which is worth knowing before an agent opens one.",
+      "docUrl": "https://aiven.io/docs/platform/concepts/maintenance-window",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "platform-agents",
+      "serviceTypes": [
+        "*"
+      ],
+      "kind": "managed automatically",
+      "title": "Aiven software runs on the nodes alongside yours",
+      "detail": "Monitoring, backup and orchestration processes run on every service, hold their own database connections, and appear in statistics as sessions and queries nobody in your team wrote. Customers are not generally aware of this, so the unexplained connection is usually ours.",
+      "docUrl": "https://aiven.io/docs/platform/concepts/service-power-cycle",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "rebuild-not-edit",
+      "serviceTypes": [
+        "*"
+      ],
+      "kind": "differs from upstream",
+      "title": "Many changes replace the nodes rather than modify them",
+      "detail": "A plan change or a maintenance update generally builds new nodes and moves service to them, so node names change and anything pinned to a host or an IP breaks. This is why a plan change on a single-node service is downtime rather than a resize.",
+      "docUrl": "https://aiven.io/docs/platform/howto/scale-services",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "disk-without-plan",
+      "serviceTypes": [
+        "*"
+      ],
+      "kind": "differs from upstream",
+      "title": "Disk can sometimes grow without a plan change",
+      "detail": "On plans that support it, storage is added to the running service, which makes \"we are running out of disk\" a smaller problem here than the upstream instinct of provisioning a bigger machine. Whether this service is one of them is in the plan block.",
+      "docUrl": "https://aiven.io/docs/platform/concepts/dynamic-disk-sizing",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "kafka-no-broker-access",
+      "serviceTypes": [
+        "kafka"
+      ],
+      "kind": "not configurable",
+      "title": "No broker shell, and only a curated subset of broker settings",
+      "detail": "There is no host access and no coordination-layer access. Broker configuration is the subset Aiven exposes through service configuration; topic-level settings go through the API. Anything an upstream runbook does by editing server.properties or running a script on the broker has no equivalent.",
+      "docUrl": "https://aiven.io/docs/products/kafka/howto/create-topic",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "kafka-karapace",
+      "serviceTypes": [
+        "kafka"
+      ],
+      "kind": "differs from upstream",
+      "title": "The schema registry is Karapace, not Confluent",
+      "detail": "API-compatible for the common paths, with its own authorisation model and its own endpoint on the service rather than a separate cluster. Client configuration copied from a Confluent tutorial usually points at the wrong place.",
+      "docUrl": "https://aiven.io/docs/products/kafka/karapace/concepts/schema-registry-authorization",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "backup-is-fork",
+      "serviceTypes": [
+        "*"
+      ],
+      "kind": "differs from upstream",
+      "title": "Restoring means forking to a new service",
+      "detail": "Backups are not restored in place. The supported path creates a new service at a point in time, which you then move traffic to — so a restore is a migration with a connection-string change, not an afternoon of pg_restore. Worth knowing before promising a rollback that assumes otherwise.",
+      "docUrl": "https://aiven.io/docs/platform/howto/console-fork-service",
+      "reviewed": "2026-09-15"
+    }
+  ],
+  "summary": "kafka-1b5cb1e7 is Kafka, currently RUNNING, critical in production. CDC event bus + Schema Registry. It holds 4 catalogued datasets and 39 described columns. Statement time and retained bytes account for $2.20 a month of this service's bill. Acting here eventually reaches clickhouse-2a6274d2 and trino-hub. 2 findings, worst: Reachable from 0.0.0.0/0 (danger). Unattended, an agent may read metadata, read metrics, read topic configuration and read consumer lag. Forbidden: delete a topic, lower retention and reduce replication factor. A change freeze is in force: Data Innovation Summit. The project is on stage, so nothing changes unattended, however good the reason. Policy basis: written for this service, overriding what its criticality would give it.",
+  "data": {
+    "datasets": 4,
+    "columns": 39,
+    "assets": [
+      {
+        "id": "kafka.webshop.public.customers",
+        "name": "webshop.public.customers",
+        "kind": "topic",
+        "qualifiedName": "kafka-1b5cb1e7.webshop.public.customers",
+        "description": "CDC topic. Avro value subject webshop.public.customers-value.",
+        "partitions": 3,
+        "replication": 3,
+        "tags": [
+          "cdc",
+          "avro"
+        ],
+        "columns": [
+          {
+            "name": "id",
+            "type": "long",
+            "nullable": false,
+            "note": "Surrogate key; orders.customer_id points here"
+          },
+          {
+            "name": "email",
+            "type": "string",
+            "nullable": false,
+            "note": "Contact address, and the key the loader upserts on"
+          },
+          {
+            "name": "name",
+            "type": "string",
+            "nullable": false,
+            "note": "Customer full name; personal data"
+          },
+          {
+            "name": "region",
+            "type": "string",
+            "nullable": false,
+            "note": "Sales region, the grain campaigns are targeted at"
+          },
+          {
+            "name": "country",
+            "type": "string",
+            "nullable": false,
+            "note": "Country within the region"
+          },
+          {
+            "name": "created_at",
+            "type": "string (ZonedTimestamp)",
+            "nullable": false,
+            "note": "Insert time, set by the database"
+          },
+          {
+            "name": "updated_at",
+            "type": "string (ZonedTimestamp)",
+            "nullable": false,
+            "note": "Last write; no UPDATE of this table was captured, so it tracks created_at"
+          },
+          {
+            "name": "__op",
+            "type": "string?",
+            "nullable": true,
+            "note": "Debezium op (c/u/d/r)"
+          },
+          {
+            "name": "__source_ts_ms",
+            "type": "long?",
+            "nullable": true,
+            "note": "Source commit timestamp"
+          },
+          {
+            "name": "__deleted",
+            "type": "string?",
+            "nullable": true,
+            "note": "ExtractNewRecordState flag"
+          }
+        ],
+        "deletion": {
+          "assetId": "kafka.webshop.public.customers",
+          "verdict": "unsafe",
+          "because": "Something is using it: 10 catalogued downstream readers, consumer group ch-webshop-customers-avro-v1. Deleting it breaks that, and the break is not reversible by re-creating an empty one.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "10 catalogued hops out: clickhouse-2a6274d2.service_kafka-1b5cb1e7.customers",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Consumer groups",
+              "found": "ch-webshop-customers-avro-v1 is reading it, 0 records behind out of 89,304 retained",
+              "source": "aiven_kafka_topic_get"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        },
+        "cost": {
+          "usdPerMonth": 0.06,
+          "share": 0.0002,
+          "basis": "retained bytes",
+          "method": "0.02 GB retained of the 90 GB on this broker, applied to $289.81 a month. Disk is one of several things the plan buys, so this is a floor rather than the full cost."
+        }
+      },
+      {
+        "id": "kafka.webshop.public.products",
+        "name": "webshop.public.products",
+        "kind": "topic",
+        "qualifiedName": "kafka-1b5cb1e7.webshop.public.products",
+        "description": "CDC topic. Avro value subject webshop.public.products-value.",
+        "partitions": 3,
+        "replication": 3,
+        "tags": [
+          "cdc",
+          "avro"
+        ],
+        "columns": [
+          {
+            "name": "id",
+            "type": "long",
+            "nullable": false,
+            "note": "Surrogate key; order_items.product_id points here"
+          },
+          {
+            "name": "sku",
+            "type": "string",
+            "nullable": false,
+            "note": "Stock keeping unit, the business key"
+          },
+          {
+            "name": "name",
+            "type": "string",
+            "nullable": false,
+            "note": "Product display name"
+          },
+          {
+            "name": "category",
+            "type": "string",
+            "nullable": false,
+            "note": "Merchandising category"
+          },
+          {
+            "name": "price",
+            "type": "string",
+            "nullable": false,
+            "note": "Current unit price; order_items.unit_price keeps the price actually charged"
+          },
+          {
+            "name": "inventory",
+            "type": "int",
+            "nullable": false,
+            "note": "Units in stock, decremented per order item and floored at 0"
+          },
+          {
+            "name": "created_at",
+            "type": "string (ZonedTimestamp)",
+            "nullable": false,
+            "note": "Insert time, set by the database"
+          },
+          {
+            "name": "updated_at",
+            "type": "string (ZonedTimestamp)",
+            "nullable": false,
+            "note": "Bumped by every price and inventory write"
+          },
+          {
+            "name": "__op",
+            "type": "string?",
+            "nullable": true,
+            "note": "Debezium op (c/u/d/r)"
+          },
+          {
+            "name": "__source_ts_ms",
+            "type": "long?",
+            "nullable": true,
+            "note": "Source commit timestamp"
+          },
+          {
+            "name": "__deleted",
+            "type": "string?",
+            "nullable": true,
+            "note": "ExtractNewRecordState flag"
+          }
+        ],
+        "deletion": {
+          "assetId": "kafka.webshop.public.products",
+          "verdict": "unsafe",
+          "because": "Something is using it: 11 catalogued downstream readers, consumer group ch-webshop-products-avro-v1. Deleting it breaks that, and the break is not reversible by re-creating an empty one.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "11 catalogued hops out: clickhouse-2a6274d2.service_kafka-1b5cb1e7.products",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Consumer groups",
+              "found": "ch-webshop-products-avro-v1 is reading it, 3 records behind out of 1,656,303 retained",
+              "source": "aiven_kafka_topic_get"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        },
+        "cost": {
+          "usdPerMonth": 0.93,
+          "share": 0.00321,
+          "basis": "retained bytes",
+          "method": "0.29 GB retained of the 90 GB on this broker, applied to $289.81 a month. Disk is one of several things the plan buys, so this is a floor rather than the full cost."
+        }
+      },
+      {
+        "id": "kafka.webshop.public.orders",
+        "name": "webshop.public.orders",
+        "kind": "topic",
+        "qualifiedName": "kafka-1b5cb1e7.webshop.public.orders",
+        "description": "CDC topic. Avro value subject webshop.public.orders-value.",
+        "partitions": 3,
+        "replication": 3,
+        "tags": [
+          "cdc",
+          "avro"
+        ],
+        "columns": [
+          {
+            "name": "id",
+            "type": "long",
+            "nullable": false,
+            "note": "Surrogate key; order_items.order_id points here"
+          },
+          {
+            "name": "customer_id",
+            "type": "long",
+            "nullable": false,
+            "note": "FK to customers.id"
+          },
+          {
+            "name": "status",
+            "type": "string",
+            "nullable": false,
+            "note": "Lifecycle state, starts at pending and is advanced in place"
+          },
+          {
+            "name": "total",
+            "type": "string",
+            "nullable": false,
+            "note": "Order value, rewritten once the line items exist"
+          },
+          {
+            "name": "region",
+            "type": "string",
+            "nullable": false,
+            "note": "Copied from the customer's region so reporting need not join"
+          },
+          {
+            "name": "created_at",
+            "type": "string (ZonedTimestamp)",
+            "nullable": false,
+            "note": "Insert time, set by the database"
+          },
+          {
+            "name": "updated_at",
+            "type": "string (ZonedTimestamp)",
+            "nullable": false,
+            "note": "Bumped by every status and total write"
+          },
+          {
+            "name": "__op",
+            "type": "string?",
+            "nullable": true,
+            "note": "Debezium op (c/u/d/r)"
+          },
+          {
+            "name": "__source_ts_ms",
+            "type": "long?",
+            "nullable": true,
+            "note": "Source commit timestamp"
+          },
+          {
+            "name": "__deleted",
+            "type": "string?",
+            "nullable": true,
+            "note": "ExtractNewRecordState flag"
+          }
+        ],
+        "deletion": {
+          "assetId": "kafka.webshop.public.orders",
+          "verdict": "unsafe",
+          "because": "Something is using it: 10 catalogued downstream readers, consumer group ch-webshop-orders-avro-v1. Deleting it breaks that, and the break is not reversible by re-creating an empty one.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "10 catalogued hops out: clickhouse-2a6274d2.service_kafka-1b5cb1e7.orders",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Consumer groups",
+              "found": "ch-webshop-orders-avro-v1 is reading it, 5 records behind out of 1,342,101 retained",
+              "source": "aiven_kafka_topic_get"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        },
+        "cost": {
+          "usdPerMonth": 0.73,
+          "share": 0.00252,
+          "basis": "retained bytes",
+          "method": "0.23 GB retained of the 90 GB on this broker, applied to $289.81 a month. Disk is one of several things the plan buys, so this is a floor rather than the full cost."
+        }
+      },
+      {
+        "id": "kafka.webshop.public.order_items",
+        "name": "webshop.public.order_items",
+        "kind": "topic",
+        "qualifiedName": "kafka-1b5cb1e7.webshop.public.order_items",
+        "description": "CDC topic. Avro value subject webshop.public.order_items-value.",
+        "partitions": 3,
+        "replication": 3,
+        "tags": [
+          "cdc",
+          "avro"
+        ],
+        "columns": [
+          {
+            "name": "id",
+            "type": "long",
+            "nullable": false,
+            "note": "Surrogate key"
+          },
+          {
+            "name": "order_id",
+            "type": "long",
+            "nullable": false,
+            "note": "FK to orders.id"
+          },
+          {
+            "name": "product_id",
+            "type": "long",
+            "nullable": false,
+            "note": "FK to products.id"
+          },
+          {
+            "name": "quantity",
+            "type": "int",
+            "nullable": false,
+            "note": "Units ordered; the same amount leaves products.inventory"
+          },
+          {
+            "name": "unit_price",
+            "type": "string",
+            "nullable": false,
+            "note": "Price charged at order time, deliberately not the current products.price"
+          },
+          {
+            "name": "__op",
+            "type": "string?",
+            "nullable": true,
+            "note": "Debezium op (c/u/d/r)"
+          },
+          {
+            "name": "__source_ts_ms",
+            "type": "long?",
+            "nullable": true,
+            "note": "Source commit timestamp"
+          },
+          {
+            "name": "__deleted",
+            "type": "string?",
+            "nullable": true,
+            "note": "ExtractNewRecordState flag"
+          }
+        ],
+        "deletion": {
+          "assetId": "kafka.webshop.public.order_items",
+          "verdict": "unsafe",
+          "because": "Something is using it: 8 catalogued downstream readers, consumer group ch-webshop-order_items-avro-v1. Deleting it breaks that, and the break is not reversible by re-creating an empty one.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "8 catalogued hops out: clickhouse-2a6274d2.service_kafka-1b5cb1e7.order_items",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Consumer groups",
+              "found": "ch-webshop-order_items-avro-v1 is reading it, 7 records behind out of 1,566,802 retained",
+              "source": "aiven_kafka_topic_get"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        },
+        "cost": {
+          "usdPerMonth": 0.48,
+          "share": 0.00165,
+          "basis": "retained bytes",
+          "method": "0.15 GB retained of the 90 GB on this broker, applied to $289.81 a month. Disk is one of several things the plan buys, so this is a floor rather than the full cost."
+        }
+      }
+    ],
+    "note": "Descriptions and tags as catalogued. Edits made in the browser live in that browser and are not in this file."
+  },
+  "lineage": {
+    "upstreamServices": [
+      "pg-37c7de3b"
+    ],
+    "downstreamServices": [
+      "clickhouse-2a6274d2"
+    ],
+    "reachesEventually": [
+      "clickhouse-2a6274d2",
+      "trino-hub"
+    ],
+    "inbound": [
+      {
+        "from": "pg.public.customers",
+        "to": "kafka.webshop.public.customers",
+        "fromService": "pg-37c7de3b",
+        "toService": "kafka-1b5cb1e7",
+        "via": "webshop-pg-cdc · Debezium pgoutput",
+        "kind": "cdc",
+        "confidence": "column",
+        "column": "id"
+      },
+      {
+        "from": "pg.public.customers",
+        "to": "kafka.webshop.public.customers",
+        "fromService": "pg-37c7de3b",
+        "toService": "kafka-1b5cb1e7",
+        "via": "webshop-pg-cdc · Debezium pgoutput",
+        "kind": "cdc",
+        "confidence": "column",
+        "column": "email"
+      },
+      {
+        "from": "pg.public.customers",
+        "to": "kafka.webshop.public.customers",
+        "fromService": "pg-37c7de3b",
+        "toService": "kafka-1b5cb1e7",
+        "via": "webshop-pg-cdc · Debezium pgoutput",
+        "kind": "cdc",
+        "confidence": "column",
+        "column": "name"
+      },
+      {
+        "from": "pg.public.customers",
+        "to": "kafka.webshop.public.customers",
+        "fromService": "pg-37c7de3b",
+        "toService": "kafka-1b5cb1e7",
+        "via": "webshop-pg-cdc · Debezium pgoutput",
+        "kind": "cdc",
+        "confidence": "column",
+        "column": "region"
+      },
+      {
+        "from": "pg.public.customers",
+        "to": "kafka.webshop.public.customers",
+        "fromService": "pg-37c7de3b",
+        "toService": "kafka-1b5cb1e7",
+        "via": "webshop-pg-cdc · Debezium pgoutput",
+        "kind": "cdc",
+        "confidence": "column",
+        "column": "country"
+      },
+      {
+        "from": "pg.public.customers",
+        "to": "kafka.webshop.public.customers",
+        "fromService": "pg-37c7de3b",
+        "toService": "kafka-1b5cb1e7",
+        "via": "webshop-pg-cdc · Debezium pgoutput",
+        "kind": "cdc",
+        "confidence": "column",
+        "column": "created_at"
+      },
+      {
+        "from": "pg.public.customers",
+        "to": "kafka.webshop.public.customers",
+        "fromService": "pg-37c7de3b",
+        "toService": "kafka-1b5cb1e7",
+        "via": "webshop-pg-cdc · Debezium pgoutput",
+        "kind": "cdc",
+        "confidence": "column",
+        "column": "updated_at"
+      },
+      {
+        "from": "pg.public.products",
+        "to": "kafka.webshop.public.products",
+        "fromService": "pg-37c7de3b",
+        "toService": "kafka-1b5cb1e7",
+        "via": "webshop-pg-cdc · Debezium pgoutput",
+        "kind": "cdc",
+        "confidence": "column",
+        "column": "id"
+      },
+      {
+        "from": "pg.public.products",
+        "to": "kafka.webshop.public.products",
+        "fromService": "pg-37c7de3b",
+        "toService": "kafka-1b5cb1e7",
+        "via": "webshop-pg-cdc · Debezium pgoutput",
+        "kind": "cdc",
+        "confidence": "column",
+        "column": "sku"
+      },
+      {
+        "from": "pg.public.products",
+        "to": "kafka.webshop.public.products",
+        "fromService": "pg-37c7de3b",
+        "toService": "kafka-1b5cb1e7",
+        "via": "webshop-pg-cdc · Debezium pgoutput",
+        "kind": "cdc",
+        "confidence": "column",
+        "column": "name"
+      },
+      {
+        "from": "pg.public.products",
+        "to": "kafka.webshop.public.products",
+        "fromService": "pg-37c7de3b",
+        "toService": "kafka-1b5cb1e7",
+        "via": "webshop-pg-cdc · Debezium pgoutput",
+        "kind": "cdc",
+        "confidence": "column",
+        "column": "category"
+      },
+      {
+        "from": "pg.public.products",
+        "to": "kafka.webshop.public.products",
+        "fromService": "pg-37c7de3b",
+        "toService": "kafka-1b5cb1e7",
+        "via": "webshop-pg-cdc · Debezium pgoutput",
+        "kind": "cdc",
+        "confidence": "column",
+        "column": "price"
+      },
+      {
+        "from": "pg.public.products",
+        "to": "kafka.webshop.public.products",
+        "fromService": "pg-37c7de3b",
+        "toService": "kafka-1b5cb1e7",
+        "via": "webshop-pg-cdc · Debezium pgoutput",
+        "kind": "cdc",
+        "confidence": "column",
+        "column": "inventory"
+      },
+      {
+        "from": "pg.public.products",
+        "to": "kafka.webshop.public.products",
+        "fromService": "pg-37c7de3b",
+        "toService": "kafka-1b5cb1e7",
+        "via": "webshop-pg-cdc · Debezium pgoutput",
+        "kind": "cdc",
+        "confidence": "column",
+        "column": "created_at"
+      },
+      {
+        "from": "pg.public.products",
+        "to": "kafka.webshop.public.products",
+        "fromService": "pg-37c7de3b",
+        "toService": "kafka-1b5cb1e7",
+        "via": "webshop-pg-cdc · Debezium pgoutput",
+        "kind": "cdc",
+        "confidence": "column",
+        "column": "updated_at"
+      },
+      {
+        "from": "pg.public.orders",
+        "to": "kafka.webshop.public.orders",
+        "fromService": "pg-37c7de3b",
+        "toService": "kafka-1b5cb1e7",
+        "via": "webshop-pg-cdc · Debezium pgoutput",
+        "kind": "cdc",
+        "confidence": "column",
+        "column": "id"
+      },
+      {
+        "from": "pg.public.orders",
+        "to": "kafka.webshop.public.orders",
+        "fromService": "pg-37c7de3b",
+        "toService": "kafka-1b5cb1e7",
+        "via": "webshop-pg-cdc · Debezium pgoutput",
+        "kind": "cdc",
+        "confidence": "column",
+        "column": "customer_id"
+      },
+      {
+        "from": "pg.public.orders",
+        "to": "kafka.webshop.public.orders",
+        "fromService": "pg-37c7de3b",
+        "toService": "kafka-1b5cb1e7",
+        "via": "webshop-pg-cdc · Debezium pgoutput",
+        "kind": "cdc",
+        "confidence": "column",
+        "column": "status"
+      },
+      {
+        "from": "pg.public.orders",
+        "to": "kafka.webshop.public.orders",
+        "fromService": "pg-37c7de3b",
+        "toService": "kafka-1b5cb1e7",
+        "via": "webshop-pg-cdc · Debezium pgoutput",
+        "kind": "cdc",
+        "confidence": "column",
+        "column": "total"
+      },
+      {
+        "from": "pg.public.orders",
+        "to": "kafka.webshop.public.orders",
+        "fromService": "pg-37c7de3b",
+        "toService": "kafka-1b5cb1e7",
+        "via": "webshop-pg-cdc · Debezium pgoutput",
+        "kind": "cdc",
+        "confidence": "column",
+        "column": "region"
+      },
+      {
+        "from": "pg.public.orders",
+        "to": "kafka.webshop.public.orders",
+        "fromService": "pg-37c7de3b",
+        "toService": "kafka-1b5cb1e7",
+        "via": "webshop-pg-cdc · Debezium pgoutput",
+        "kind": "cdc",
+        "confidence": "column",
+        "column": "created_at"
+      },
+      {
+        "from": "pg.public.orders",
+        "to": "kafka.webshop.public.orders",
+        "fromService": "pg-37c7de3b",
+        "toService": "kafka-1b5cb1e7",
+        "via": "webshop-pg-cdc · Debezium pgoutput",
+        "kind": "cdc",
+        "confidence": "column",
+        "column": "updated_at"
+      },
+      {
+        "from": "pg.public.order_items",
+        "to": "kafka.webshop.public.order_items",
+        "fromService": "pg-37c7de3b",
+        "toService": "kafka-1b5cb1e7",
+        "via": "webshop-pg-cdc · Debezium pgoutput",
+        "kind": "cdc",
+        "confidence": "column",
+        "column": "id"
+      },
+      {
+        "from": "pg.public.order_items",
+        "to": "kafka.webshop.public.order_items",
+        "fromService": "pg-37c7de3b",
+        "toService": "kafka-1b5cb1e7",
+        "via": "webshop-pg-cdc · Debezium pgoutput",
+        "kind": "cdc",
+        "confidence": "column",
+        "column": "order_id"
+      },
+      {
+        "from": "pg.public.order_items",
+        "to": "kafka.webshop.public.order_items",
+        "fromService": "pg-37c7de3b",
+        "toService": "kafka-1b5cb1e7",
+        "via": "webshop-pg-cdc · Debezium pgoutput",
+        "kind": "cdc",
+        "confidence": "column",
+        "column": "product_id"
+      },
+      {
+        "from": "pg.public.order_items",
+        "to": "kafka.webshop.public.order_items",
+        "fromService": "pg-37c7de3b",
+        "toService": "kafka-1b5cb1e7",
+        "via": "webshop-pg-cdc · Debezium pgoutput",
+        "kind": "cdc",
+        "confidence": "column",
+        "column": "quantity"
+      },
+      {
+        "from": "pg.public.order_items",
+        "to": "kafka.webshop.public.order_items",
+        "fromService": "pg-37c7de3b",
+        "toService": "kafka-1b5cb1e7",
+        "via": "webshop-pg-cdc · Debezium pgoutput",
+        "kind": "cdc",
+        "confidence": "column",
+        "column": "unit_price"
+      }
+    ],
+    "outbound": [
+      {
+        "from": "kafka.webshop.public.customers",
+        "to": "ch.service_kafka.customers",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "id"
+      },
+      {
+        "from": "kafka.webshop.public.customers",
+        "to": "ch.service_kafka.customers",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "email"
+      },
+      {
+        "from": "kafka.webshop.public.customers",
+        "to": "ch.service_kafka.customers",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "name"
+      },
+      {
+        "from": "kafka.webshop.public.customers",
+        "to": "ch.service_kafka.customers",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "region"
+      },
+      {
+        "from": "kafka.webshop.public.customers",
+        "to": "ch.service_kafka.customers",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "country"
+      },
+      {
+        "from": "kafka.webshop.public.customers",
+        "to": "ch.service_kafka.customers",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "created_at"
+      },
+      {
+        "from": "kafka.webshop.public.customers",
+        "to": "ch.service_kafka.customers",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "updated_at"
+      },
+      {
+        "from": "kafka.webshop.public.customers",
+        "to": "ch.service_kafka.customers",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "__op"
+      },
+      {
+        "from": "kafka.webshop.public.customers",
+        "to": "ch.service_kafka.customers",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "__source_ts_ms"
+      },
+      {
+        "from": "kafka.webshop.public.customers",
+        "to": "ch.service_kafka.customers",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "__deleted"
+      },
+      {
+        "from": "kafka.webshop.public.products",
+        "to": "ch.service_kafka.products",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "id"
+      },
+      {
+        "from": "kafka.webshop.public.products",
+        "to": "ch.service_kafka.products",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "sku"
+      },
+      {
+        "from": "kafka.webshop.public.products",
+        "to": "ch.service_kafka.products",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "name"
+      },
+      {
+        "from": "kafka.webshop.public.products",
+        "to": "ch.service_kafka.products",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "category"
+      },
+      {
+        "from": "kafka.webshop.public.products",
+        "to": "ch.service_kafka.products",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "price"
+      },
+      {
+        "from": "kafka.webshop.public.products",
+        "to": "ch.service_kafka.products",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "inventory"
+      },
+      {
+        "from": "kafka.webshop.public.products",
+        "to": "ch.service_kafka.products",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "created_at"
+      },
+      {
+        "from": "kafka.webshop.public.products",
+        "to": "ch.service_kafka.products",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "updated_at"
+      },
+      {
+        "from": "kafka.webshop.public.products",
+        "to": "ch.service_kafka.products",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "__op"
+      },
+      {
+        "from": "kafka.webshop.public.products",
+        "to": "ch.service_kafka.products",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "__source_ts_ms"
+      },
+      {
+        "from": "kafka.webshop.public.products",
+        "to": "ch.service_kafka.products",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "__deleted"
+      },
+      {
+        "from": "kafka.webshop.public.orders",
+        "to": "ch.service_kafka.orders",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "id"
+      },
+      {
+        "from": "kafka.webshop.public.orders",
+        "to": "ch.service_kafka.orders",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "customer_id"
+      },
+      {
+        "from": "kafka.webshop.public.orders",
+        "to": "ch.service_kafka.orders",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "status"
+      },
+      {
+        "from": "kafka.webshop.public.orders",
+        "to": "ch.service_kafka.orders",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "total"
+      },
+      {
+        "from": "kafka.webshop.public.orders",
+        "to": "ch.service_kafka.orders",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "region"
+      },
+      {
+        "from": "kafka.webshop.public.orders",
+        "to": "ch.service_kafka.orders",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "created_at"
+      },
+      {
+        "from": "kafka.webshop.public.orders",
+        "to": "ch.service_kafka.orders",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "updated_at"
+      },
+      {
+        "from": "kafka.webshop.public.orders",
+        "to": "ch.service_kafka.orders",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "__op"
+      },
+      {
+        "from": "kafka.webshop.public.orders",
+        "to": "ch.service_kafka.orders",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "__source_ts_ms"
+      },
+      {
+        "from": "kafka.webshop.public.orders",
+        "to": "ch.service_kafka.orders",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "__deleted"
+      },
+      {
+        "from": "kafka.webshop.public.order_items",
+        "to": "ch.service_kafka.order_items",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "id"
+      },
+      {
+        "from": "kafka.webshop.public.order_items",
+        "to": "ch.service_kafka.order_items",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "order_id"
+      },
+      {
+        "from": "kafka.webshop.public.order_items",
+        "to": "ch.service_kafka.order_items",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "product_id"
+      },
+      {
+        "from": "kafka.webshop.public.order_items",
+        "to": "ch.service_kafka.order_items",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "quantity"
+      },
+      {
+        "from": "kafka.webshop.public.order_items",
+        "to": "ch.service_kafka.order_items",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "unit_price"
+      },
+      {
+        "from": "kafka.webshop.public.order_items",
+        "to": "ch.service_kafka.order_items",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "__op"
+      },
+      {
+        "from": "kafka.webshop.public.order_items",
+        "to": "ch.service_kafka.order_items",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "__source_ts_ms"
+      },
+      {
+        "from": "kafka.webshop.public.order_items",
+        "to": "ch.service_kafka.order_items",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "__deleted"
+      }
+    ],
+    "internalHops": 0,
+    "integrations": [
+      {
+        "type": "kafka_connect",
+        "thisServiceIs": "source",
+        "peer": "kafkaconnect-30e121dd",
+        "active": true,
+        "description": "Dedicated Connect cluster attached to the webshop Kafka."
+      },
+      {
+        "type": "debezium_cdc",
+        "thisServiceIs": "destination",
+        "peer": "pg-37c7de3b",
+        "active": true,
+        "description": "Kafka Connect connector webshop-pg-cdc: Debezium pgoutput on publication debezium_webshop, four public tables to Avro topics. Runs on kafkaconnect-30e121dd rather than as its own integration."
+      },
+      {
+        "type": "clickhouse_kafka",
+        "thisServiceIs": "source",
+        "peer": "clickhouse-2a6274d2",
+        "active": true,
+        "description": "Four AvroConfluent Kafka engine tables, column-mapped."
+      }
+    ],
+    "note": "Lineage is catalogued from connector configuration and schemas, not traced at runtime. A `dataset` confidence means the tables are known to be connected without the column mapping being read."
+  },
+  "boundaries": {
+    "doNotRead": [],
+    "handleCarefully": [],
+    "note": "These come from the data, and apply to reads. What may be done to the service itself is in `policy`, and an operation absent from all three of its lists is one nobody has considered: treat it as forbidden."
+  }
+}

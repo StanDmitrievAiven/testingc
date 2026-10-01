@@ -1,5 +1,6 @@
 export type Route =
   | { page: 'overview' }
+  | { page: 'fleet' }
   | { page: 'services' }
   | { page: 'service'; id: string; tab?: string }
   | { page: 'applications' }
@@ -13,6 +14,7 @@ export type Navigate = (route: Route) => void
 
 const pages = [
   'overview',
+  'fleet',
   'services',
   'service',
   'applications',

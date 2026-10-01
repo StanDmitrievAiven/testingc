@@ -1,0 +1,199 @@
+{
+  "assetId": "ch.pg.marketing.campaigns",
+  "name": "campaigns",
+  "qualifiedName": "clickhouse-2a6274d2.service_pg-37c7de3b.marketing.campaigns",
+  "kind": "clickhouse_table",
+  "serviceId": "clickhouse-2a6274d2",
+  "serviceName": "clickhouse-2a6274d2",
+  "serviceType": "ClickHouse",
+  "description": "PostgreSQL engine over marketing.campaigns via clickhouse_postgresql.",
+  "descriptionReview": {
+    "author": "the catalog snapshot",
+    "at": "2026-09-15",
+    "state": "accepted",
+    "sources": [
+      "this catalog, authored when the project was walked"
+    ]
+  },
+  "owners": [],
+  "tags": [
+    {
+      "tag": "marketing",
+      "meaning": "Campaign data: spend, sends, clicks and the revenue attributed to them."
+    },
+    {
+      "tag": "federation",
+      "meaning": "Queried in place through a federating engine, so each read hits the source system."
+    }
+  ],
+  "columns": [
+    {
+      "name": "id",
+      "type": "bigint",
+      "constraint": "PK",
+      "nullable": false,
+      "note": "Surrogate key"
+    },
+    {
+      "name": "name",
+      "type": "text",
+      "constraint": "UQ",
+      "nullable": false,
+      "note": "Campaign name, unique"
+    },
+    {
+      "name": "region",
+      "type": "text",
+      "nullable": false,
+      "note": "Sales region targeted, same vocabulary as customers.region"
+    },
+    {
+      "name": "country",
+      "type": "text",
+      "nullable": true,
+      "note": "Single-country target; null means the whole region"
+    },
+    {
+      "name": "channel",
+      "type": "text",
+      "nullable": false,
+      "note": "Channel the campaign runs on"
+    },
+    {
+      "name": "start_date",
+      "type": "date",
+      "nullable": false,
+      "note": "First day the campaign is live"
+    },
+    {
+      "name": "end_date",
+      "type": "date",
+      "nullable": false,
+      "note": "Last day the campaign is live"
+    },
+    {
+      "name": "discount_pct",
+      "type": "numeric(5,2)",
+      "nullable": false,
+      "note": "Discount offered, in percent"
+    },
+    {
+      "name": "budget_eur",
+      "type": "numeric(12,2)",
+      "nullable": false,
+      "note": "Planned spend, EUR"
+    },
+    {
+      "name": "target_revenue_eur",
+      "type": "numeric(12,2)",
+      "nullable": false,
+      "note": "Revenue this campaign is meant to bring in, EUR"
+    },
+    {
+      "name": "status",
+      "type": "text",
+      "nullable": false,
+      "note": "Campaign state, starts at planned"
+    },
+    {
+      "name": "description",
+      "type": "text",
+      "nullable": true,
+      "note": "Free-text brief"
+    },
+    {
+      "name": "created_at",
+      "type": "timestamptz",
+      "nullable": false,
+      "note": "Insert time, set by the database"
+    },
+    {
+      "name": "updated_at",
+      "type": "timestamptz",
+      "nullable": false,
+      "note": "Last edit time"
+    }
+  ],
+  "facts": [
+    {
+      "what": "Rows",
+      "value": "16",
+      "origin": "captured",
+      "source": "this catalog, from the service schema"
+    },
+    {
+      "what": "Columns",
+      "value": "14",
+      "origin": "captured",
+      "source": "this catalog, from the service schema"
+    },
+    {
+      "what": "Last write",
+      "value": "Unknown. No tool read for this project reports a last-write or last-produce time.",
+      "origin": "derived",
+      "source": "the set of tools read for this project"
+    }
+  ],
+  "findings": [],
+  "deletion": {
+    "assetId": "ch.pg.marketing.campaigns",
+    "verdict": "cannot tell",
+    "because": "Nothing here shows it being used, but no tool here can see who reads a clickhouse table. Absent evidence is not evidence of absence, so this is a question for somebody who knows the system rather than a verdict.",
+    "evidence": [
+      {
+        "what": "Downstream readers",
+        "found": "None catalogued",
+        "source": "this catalog, from connector configuration and schemas"
+      },
+      {
+        "what": "Usage telemetry",
+        "found": "Nothing in this snapshot reports reads of a clickhouse table",
+        "source": "—"
+      },
+      {
+        "what": "Last write",
+        "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+        "source": "—"
+      }
+    ]
+  },
+  "diagnosis": {
+    "assetId": "ch.pg.marketing.campaigns",
+    "name": "clickhouse-2a6274d2.service_pg-37c7de3b.marketing.campaigns",
+    "chain": [
+      {
+        "assetId": "pg.marketing.campaigns",
+        "name": "pg-37c7de3b.marketing.campaigns",
+        "serviceId": "pg-37c7de3b",
+        "serviceName": "pg-37c7de3b",
+        "distance": 1,
+        "via": "clickhouse_postgresql · defaultdb.marketing",
+        "health": "ok",
+        "why": "Nothing captured here explains a data problem.",
+        "findings": []
+      }
+    ],
+    "verdict": "No hop upstream of clickhouse-2a6274d2.service_pg-37c7de3b.marketing.campaigns explains it. Checked 1 hop upstream across 1 services. Every hop was assessed and every one is clean. Look at whatever reads this, or at the query producing the symptom.",
+    "freshness": "No hop in this chain measures its own delay, so there is no end-to-end figure. Consumer lag is the only latency this project captures, and there is no Kafka hop here to read it from.",
+    "boundary": "The walk stops where Aiven can see: the last hop inside the platform. Whatever reads the end of this chain — a dashboard, a job, somebody's notebook — is invisible here, and is where a symptom nothing upstream explains usually turns out to live."
+  },
+  "policy": {
+    "serviceId": "clickhouse-2a6274d2",
+    "allowed": [
+      "read metadata",
+      "read metrics"
+    ],
+    "needsApproval": [
+      "apply pending maintenance",
+      "restart",
+      "change plan"
+    ],
+    "forbidden": [
+      "delete the service",
+      "drop a table"
+    ],
+    "because": "Single node with three platform updates already queued against deadlines, so a restart here competes with maintenance Aiven will run anyway.",
+    "basis": "written for this service, overriding what its criticality would give it"
+  },
+  "note": "Descriptions, tags and owners are editable in the browser, and those edits live in that browser rather than in this file. Everything marked captured names the Aiven tool it came from and when it was read."
+}

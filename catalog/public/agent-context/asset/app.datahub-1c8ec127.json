@@ -1,0 +1,118 @@
+{
+  "assetId": "app.datahub-1c8ec127",
+  "name": "datahub-1c8ec127",
+  "qualifiedName": "datahub.datahub-1c8ec127",
+  "kind": "catalog",
+  "serviceId": "datahub-1c8ec127",
+  "serviceName": "datahub-1c8ec127",
+  "serviceType": "DataHub",
+  "description": "The project DataHub. Active metadata ingestion from pg-37c7de3b and trino-hub-pg, both with emit_lineage off.",
+  "descriptionReview": {
+    "author": "the catalog snapshot",
+    "at": "2026-09-15",
+    "state": "accepted",
+    "sources": [
+      "this catalog, authored when the project was walked"
+    ]
+  },
+  "owners": [],
+  "tags": [
+    {
+      "tag": "governance",
+      "meaning": "Ownership, policy and audit records used to govern the platform."
+    }
+  ],
+  "columns": [],
+  "facts": [
+    {
+      "what": "Columns",
+      "value": "0",
+      "origin": "captured",
+      "source": "this catalog, from the service schema"
+    },
+    {
+      "what": "Last write",
+      "value": "Unknown. No tool read for this project reports a last-write or last-produce time.",
+      "origin": "derived",
+      "source": "the set of tools read for this project"
+    }
+  ],
+  "findings": [],
+  "deletion": {
+    "assetId": "app.datahub-1c8ec127",
+    "verdict": "cannot tell",
+    "because": "Nothing here shows it being used, but no tool here can see who reads a catalog. Absent evidence is not evidence of absence, so this is a question for somebody who knows the system rather than a verdict.",
+    "evidence": [
+      {
+        "what": "Downstream readers",
+        "found": "None catalogued",
+        "source": "this catalog, from connector configuration and schemas"
+      },
+      {
+        "what": "Usage telemetry",
+        "found": "Nothing in this snapshot reports reads of a catalog",
+        "source": "—"
+      },
+      {
+        "what": "Last write",
+        "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+        "source": "—"
+      }
+    ]
+  },
+  "diagnosis": {
+    "assetId": "app.datahub-1c8ec127",
+    "name": "datahub.datahub-1c8ec127",
+    "chain": [
+      {
+        "assetId": "pg.public.customers",
+        "name": "pg-37c7de3b.public.customers",
+        "serviceId": "pg-37c7de3b",
+        "serviceName": "pg-37c7de3b",
+        "distance": 1,
+        "via": "datahub_metadata_ingestion · metadata only, emit_lineage off",
+        "health": "ok",
+        "why": "Nothing captured here explains a data problem.",
+        "findings": []
+      },
+      {
+        "assetId": "trino.trino_catalogs",
+        "name": "trino-hub-pg.public.trino_catalogs",
+        "serviceId": "trino-hub-pg",
+        "serviceName": "trino-hub-pg",
+        "distance": 1,
+        "via": "datahub_metadata_ingestion · metadata only, emit_lineage off",
+        "health": "ok",
+        "why": "Nothing captured here explains a data problem.",
+        "findings": []
+      },
+      {
+        "assetId": "app.webshop-simulator",
+        "name": "application.webshop-simulator",
+        "serviceId": "webshop-simulator",
+        "serviceName": "webshop-simulator",
+        "distance": 2,
+        "via": "application_service_credential",
+        "health": "unknown",
+        "why": "No facts or metrics were captured for this service, so it cannot be cleared or blamed.",
+        "findings": []
+      }
+    ],
+    "verdict": "No hop upstream of datahub.datahub-1c8ec127 explains it. Checked 3 hops upstream across 3 services. 1 of them could not be assessed at all (webshop-simulator), so this is \"nothing found\" rather than \"nothing wrong\". Look at whatever reads this, or at the query producing the symptom.",
+    "freshness": "No hop in this chain measures its own delay, so there is no end-to-end figure. Consumer lag is the only latency this project captures, and there is no Kafka hop here to read it from.",
+    "boundary": "The walk stops where Aiven can see: the last hop inside the platform. Whatever reads the end of this chain — a dashboard, a job, somebody's notebook — is invisible here, and is where a symptom nothing upstream explains usually turns out to live."
+  },
+  "policy": {
+    "serviceId": "datahub-1c8ec127",
+    "allowed": [
+      "read metadata"
+    ],
+    "needsApproval": [],
+    "forbidden": [
+      "everything else"
+    ],
+    "because": "No policy has been written for this service, so it is read-only until somebody writes one.",
+    "basis": "unclassified, so the most cautious setting rather than a convenient one"
+  },
+  "note": "Descriptions, tags and owners are editable in the browser, and those edits live in that browser rather than in this file. Everything marked captured names the Aiven tool it came from and when it was read."
+}

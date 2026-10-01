@@ -1,0 +1,1524 @@
+{
+  "serviceId": "clickhouse-2a6274d2",
+  "name": "clickhouse-2a6274d2",
+  "type": "clickhouse",
+  "coverage": {
+    "facts": true,
+    "metrics": true,
+    "classified": true,
+    "policy": true,
+    "contact": true
+  },
+  "classification": {
+    "serviceId": "clickhouse-2a6274d2",
+    "environment": "production",
+    "criticality": "important",
+    "provenance": "inferred",
+    "evidence": "An analytics warehouse holding copies that arrived through Kafka. People depend on it and would notice within the hour, but every table in it can be rebuilt from upstream, so the cost of failure is time rather than data."
+  },
+  "objectives": [
+    {
+      "id": "disk-headroom",
+      "appliesTo": [
+        "*"
+      ],
+      "title": "At least a quarter of a year of disk runway",
+      "target": 90,
+      "unit": "days to full",
+      "breach": 30,
+      "rationale": "Ninety days is long enough to plan a plan change into a maintenance window and get it approved. Thirty is short enough that the window is now, because on a single node growing the disk is an outage that has to be scheduled with whoever depends on it.",
+      "owner": "Data platform team",
+      "reviewed": "2026-09-08"
+    },
+    {
+      "id": "evidence-freshness",
+      "appliesTo": [
+        "*"
+      ],
+      "title": "Evidence no more than a day behind the snapshot it arrived in",
+      "target": 24,
+      "unit": "hours behind capture",
+      "rationale": "A capacity claim is worth exactly as much as the reading under it. A day is the point where a trend computed from the numbers stops describing the service as it is now, and an agent acting on it is acting on history.",
+      "owner": "Data platform team",
+      "reviewed": "2026-09-08"
+    },
+    {
+      "id": "cpu-spike",
+      "appliesTo": [
+        "*"
+      ],
+      "title": "A peak worth naming",
+      "target": 50,
+      "unit": "percent peak",
+      "rationale": "Below half a core-equivalent nothing is worth reporting. This decides only whether a spike gets mentioned, never whether anything is done about it.",
+      "owner": "Data platform team",
+      "reviewed": "2026-09-08"
+    },
+    {
+      "id": "cpu-sustained",
+      "appliesTo": [
+        "*"
+      ],
+      "title": "Sustained load, as opposed to bursts",
+      "target": 20,
+      "unit": "percent average",
+      "rationale": "Under a fifth on average, a high peak is a query arriving rather than a service running out of room. The pair matters because resizing on a peak is the most common expensive mistake available here.",
+      "owner": "Data platform team",
+      "reviewed": "2026-09-08"
+    },
+    {
+      "id": "downsize-headroom",
+      "appliesTo": [
+        "*"
+      ],
+      "title": "A smaller plan must still leave a third of its disk free",
+      "target": 67,
+      "unit": "percent of the smaller disk in use",
+      "rationale": "The saving is worth having and the second migration is not. Moving down to a rung that is already two-thirds full buys a few pounds a month and a disk-full incident a quarter later, which costs more than the plan ever saved. A third free is the margin that makes the move a decision rather than a bet on growth stopping.",
+      "owner": "Data platform team",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "downsize-utilisation",
+      "appliesTo": [
+        "*"
+      ],
+      "title": "Peaks well inside the plan before shrinking it",
+      "target": 60,
+      "unit": "percent peak of any resource",
+      "rationale": "Averages are what make downsizing look free: a service at five percent mean CPU that touches sixty-five under load will meet that load on a smaller plan too, and meet it worse. The peak is the number the plan actually has to survive, so it is the one that decides.",
+      "owner": "Data platform team",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "backup-freshness",
+      "appliesTo": [
+        "*"
+      ],
+      "title": "A restore point from within the last two days",
+      "target": 48,
+      "unit": "hours since the last backup",
+      "breach": 168,
+      "rationale": "Aiven takes daily backups, so two days allows one to fail without raising anything. A week means the restore point has quietly moved from yesterday to last Tuesday, which is only discovered at the worst possible moment.",
+      "owner": "Data platform team",
+      "reviewed": "2026-09-15"
+    }
+  ],
+  "capabilities": {
+    "nodes": 1,
+    "failoverAvailable": false,
+    "diskGb": 100,
+    "backupsRetained": 3,
+    "latestBackupAt": "2026-09-06T12:46:16Z",
+    "source": "aiven_service_get"
+  },
+  "captured": {
+    "catalog": "2026-09-07T07:20:00Z",
+    "serviceFacts": "2026-09-07T07:20:00Z",
+    "metrics": "2026-09-08T10:55:00Z",
+    "connectors": "2026-09-08T10:58:00Z",
+    "purposeLog": "2026-09-04T12:05:41.806Z",
+    "policy": "authored, not captured"
+  },
+  "policy": {
+    "serviceId": "clickhouse-2a6274d2",
+    "allowed": [
+      "read metadata",
+      "read metrics"
+    ],
+    "needsApproval": [
+      "apply pending maintenance",
+      "restart",
+      "change plan"
+    ],
+    "forbidden": [
+      "delete the service",
+      "drop a table"
+    ],
+    "because": "Single node with three platform updates already queued against deadlines, so a restart here competes with maintenance Aiven will run anyway.",
+    "basis": "written for this service, overriding what its criticality would give it"
+  },
+  "freeze": {
+    "active": true,
+    "from": "2026-09-08T00:00:00Z",
+    "to": "2026-09-12T23:59:59Z",
+    "reason": "Data Innovation Summit. The project is on stage, so nothing changes unattended, however good the reason."
+  },
+  "owners": [],
+  "contacts": [
+    {
+      "email": "ayesha.ahmad@aiven.io",
+      "why": "Last touched it: changed it 3 times in the event log"
+    },
+    {
+      "email": "stan.dmitriev@aiven.io",
+      "why": "Last touched it: changed it 2 times in the event log"
+    }
+  ],
+  "ownership": "Nobody has been declared as an owner here, so the names below are observed rather than responsible: Marmot's asset_owners and teams tables are empty, and these are the people Aiven lists as contacts and the people the event log shows changing this service.",
+  "findings": [
+    {
+      "kind": "open-to-internet",
+      "severity": "danger",
+      "title": "Reachable from 0.0.0.0/0",
+      "detail": "The ip filter allows every address, so the only thing between this service and the internet is its password.",
+      "source": "aiven_service_get",
+      "capturedAt": "2026-09-07T07:20:00Z",
+      "docUrl": "https://aiven.io/docs/platform/howto/restrict-access",
+      "runbook": {
+        "forFinding": "open-to-internet",
+        "title": "Close the service to the open internet",
+        "docUrl": "https://aiven.io/docs/platform/howto/restrict-access",
+        "deviations": [
+          "pg-no-hba"
+        ],
+        "steps": [
+          "List what actually connects: the integrations in this catalog plus any application using a service credential.",
+          "Collect the egress ranges those clients come from. A guess here locks out production.",
+          "Replace the ip_filter with that list using aiven_service_update, leaving 0.0.0.0/0 out.",
+          "Keep your own access in the list, or you lock yourself out along with everyone else."
+        ],
+        "whileItRuns": "Established connections survive. New connections from anything outside the list are refused immediately, which is the whole point and also the risk.",
+        "takes": "Seconds to apply.",
+        "rollback": "Reversible: put the previous filter back with the same call.",
+        "verify": "Connect from an allowed address, then from one that is not. The second attempt must fail, or the filter did not take."
+      }
+    },
+    {
+      "kind": "single-node",
+      "severity": "caution",
+      "title": "One node, so a restart is an outage",
+      "detail": "There is nothing to fail over to. Every restart, plan change and platform update is downtime that has to be timed rather than absorbed.",
+      "source": "aiven_service_get",
+      "capturedAt": "2026-09-07T07:20:00Z",
+      "docUrl": "https://aiven.io/docs/products/postgresql/concepts/high-availability",
+      "runbook": {
+        "forFinding": "single-node",
+        "title": "Restart a service that has no second node",
+        "docUrl": "https://aiven.io/docs/products/postgresql/concepts/high-availability",
+        "deviations": [
+          "rebuild-not-edit"
+        ],
+        "steps": [
+          "Treat this as planned downtime and announce it, because that is what it is.",
+          "Check no platform maintenance is already in flight for the same service.",
+          "Prefer the existing maintenance window over a restart of your own.",
+          "Restart, then watch the dependents rather than the service: it comes back before they do."
+        ],
+        "whileItRuns": "A total outage for the length of the restart. Change data capture stops and resumes from its replication slot; consumers downstream fall behind rather than lose data.",
+        "takes": "A few minutes, most of it the service coming back up.",
+        "rollback": "None. A restart cannot be undone, only waited out.",
+        "verify": "Service state RUNNING, the CDC connector back to RUNNING, and consumer lag falling across two readings rather than one."
+      }
+    },
+    {
+      "kind": "pending-maintenance",
+      "severity": "caution",
+      "title": "3 platform updates queued, the first due 2026-09-22",
+      "detail": "After each deadline Aiven applies the update itself. On a single node that is downtime at a time nobody chose. Earliest: Tiered storage zero copy improvements. Fixes a metadata leak in tiered storage.",
+      "source": "aiven_service_get",
+      "capturedAt": "2026-09-07T07:20:00Z",
+      "docUrl": "https://aiven.io/docs/platform/concepts/maintenance-window",
+      "runbook": {
+        "forFinding": "pending-maintenance",
+        "title": "Apply platform maintenance before its deadline",
+        "docUrl": "https://aiven.io/docs/platform/concepts/maintenance-window",
+        "deviations": [
+          "auto-updates",
+          "rebuild-not-edit"
+        ],
+        "steps": [
+          "Read the deadlines from aiven_service_get: after them, Aiven applies the update whether or not it suits you.",
+          "Pick a window before the earliest deadline and inside the service maintenance window.",
+          "Apply the updates there, oldest deadline first."
+        ],
+        "whileItRuns": "Rolling on a multi-node service, downtime on a single node. Either way it is the same interruption you would get by leaving it to the deadline, but at a time you chose.",
+        "takes": "Minutes per update, longer for a version upgrade.",
+        "rollback": "A version upgrade is one way. Plan for going forward, not back.",
+        "verify": "The pending update list is empty and the service reports the new version."
+      }
+    },
+    {
+      "kind": "cpu-spikes",
+      "severity": "info",
+      "title": "CPU spikes on an otherwise idle service",
+      "detail": "55% peak against a 8% average, so above the 50% worth naming and below the 20% that would count as sustained. That is work arriving in bursts, not a service running out of headroom, and it is not a reason to change the plan.",
+      "objective": "cpu-spike",
+      "source": "aiven_service_metrics_fetch",
+      "capturedAt": "2026-09-08T10:55:00Z",
+      "docUrl": "https://aiven.io/docs/products/kafka/concepts/horizontal-vertical-scaling"
+    },
+    {
+      "kind": "no-termination-protection",
+      "severity": "info",
+      "title": "Termination protection is off",
+      "detail": "Nothing stands between a deletion call and this service, which is a cheap gap to close.",
+      "source": "aiven_service_get",
+      "capturedAt": "2026-09-07T07:20:00Z",
+      "docUrl": "https://aiven.io/docs/tools/api",
+      "runbook": {
+        "forFinding": "no-termination-protection",
+        "title": "Turn on termination protection",
+        "steps": [
+          "Set termination protection with aiven_service_update."
+        ],
+        "whileItRuns": "Nothing. It is a configuration flag, with no restart.",
+        "takes": "Seconds.",
+        "rollback": "Reversible with the same call, which is exactly why it is worth having on.",
+        "verify": "Read the service back and confirm the flag is set."
+      }
+    }
+  ],
+  "readings": [
+    {
+      "serviceId": "clickhouse-2a6274d2",
+      "metric": "disk_usage",
+      "series": "clickhouse-2a6274d2-5",
+      "min": 0.828,
+      "avg": 1.308,
+      "max": 1.643,
+      "latest": 1.503,
+      "from": "2026-09-01T10:55:00Z",
+      "to": "2026-09-08T10:55:00Z",
+      "staleHours": 0,
+      "trend": {
+        "perDay": 0.09642857142857142,
+        "windowDays": 7,
+        "daysToFull": 1021.4503703703705,
+        "includesInitialLoad": false
+      }
+    },
+    {
+      "serviceId": "clickhouse-2a6274d2",
+      "metric": "cpu_usage",
+      "series": "clickhouse-2a6274d2-5",
+      "min": 7.137,
+      "avg": 8.046,
+      "max": 55.418,
+      "latest": 8.527,
+      "from": "2026-09-01T10:55:00Z",
+      "to": "2026-09-08T10:55:00Z",
+      "staleHours": 0
+    },
+    {
+      "serviceId": "clickhouse-2a6274d2",
+      "metric": "mem_usage",
+      "series": "clickhouse-2a6274d2-5",
+      "min": 21.733,
+      "avg": 23.588,
+      "max": 29.514,
+      "latest": 25.077,
+      "from": "2026-09-01T10:55:00Z",
+      "to": "2026-09-08T10:55:00Z",
+      "staleHours": 0
+    }
+  ],
+  "dependents": {
+    "datasets": 5,
+    "downstreamAssets": [
+      "trino.summit_clickhouse"
+    ],
+    "downstreamServices": [
+      "trino-hub"
+    ],
+    "credentialHolders": [],
+    "stacks": [
+      "Webshop"
+    ]
+  },
+  "plan": {
+    "options": [],
+    "downsize": {
+      "verdict": "no smaller rung priced",
+      "because": "No plan prices were captured for this service type, so a cheaper rung cannot be priced even if one exists."
+    },
+    "note": "No plan prices were captured for clickhouse, so a fix here cannot state its cost yet."
+  },
+  "lifecycle": {
+    "state": "RUNNING",
+    "stateReadAt": "2026-09-07T07:20:00Z",
+    "stateMeans": "Serving traffic. Normal, and the only state in which most changes are safe to attempt.",
+    "maintenanceWindow": "thursday at 07:01:10 UTC",
+    "updates": [
+      {
+        "description": "Tiered storage zero copy improvements. Fixes a metadata leak in tiered storage.",
+        "startAt": "2026-09-17T07:01:10Z",
+        "deadline": "2026-09-22T10:41:50Z",
+        "impact": "Treat as downtime: with one node there is nothing to absorb a restart, whatever the update turns out to be.",
+        "takes": "Minutes, though this is an estimate rather than a stated duration.",
+        "deadlineNote": "Mandatory after 2026-09-22T10:41:50Z: Aiven applies it then, in its window rather than yours."
+      },
+      {
+        "description": "Update ClickHouse 26.3 to version 26.3.26.3.",
+        "startAt": "2026-09-17T07:01:10Z",
+        "deadline": "2026-09-23T10:29:40Z",
+        "impact": "A version upgrade on a single node is downtime for its whole duration, and it cannot be rolled back.",
+        "takes": "Ten minutes to an hour, depending on data size.",
+        "deadlineNote": "Mandatory after 2026-09-23T10:29:40Z: Aiven applies it then, in its window rather than yours."
+      },
+      {
+        "description": "Restore improvements.",
+        "startAt": "2026-09-24T07:01:10Z",
+        "deadline": "2026-09-28T16:20:23Z",
+        "impact": "Treat as downtime: with one node there is nothing to absorb a restart, whatever the update turns out to be.",
+        "takes": "Minutes, though this is an estimate rather than a stated duration.",
+        "deadlineNote": "Mandatory after 2026-09-28T16:20:23Z: Aiven applies it then, in its window rather than yours."
+      }
+    ],
+    "note": "Impact and duration are authored per kind of update, since Aiven states what and when but not what it costs."
+  },
+  "descriptionReview": {
+    "author": "the catalog snapshot",
+    "at": "2026-09-15",
+    "state": "accepted",
+    "sources": [
+      "this catalog, authored when the project was walked"
+    ]
+  },
+  "deviations": [
+    {
+      "id": "auto-updates",
+      "serviceTypes": [
+        "*"
+      ],
+      "kind": "managed automatically",
+      "title": "Minor versions and platform software update themselves",
+      "detail": "Security patches and minor version upgrades are applied in the maintenance window without being requested. A version changing between two readings of this catalog is expected behaviour rather than an incident, which is worth knowing before an agent opens one.",
+      "docUrl": "https://aiven.io/docs/platform/concepts/maintenance-window",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "platform-agents",
+      "serviceTypes": [
+        "*"
+      ],
+      "kind": "managed automatically",
+      "title": "Aiven software runs on the nodes alongside yours",
+      "detail": "Monitoring, backup and orchestration processes run on every service, hold their own database connections, and appear in statistics as sessions and queries nobody in your team wrote. Customers are not generally aware of this, so the unexplained connection is usually ours.",
+      "docUrl": "https://aiven.io/docs/platform/concepts/service-power-cycle",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "rebuild-not-edit",
+      "serviceTypes": [
+        "*"
+      ],
+      "kind": "differs from upstream",
+      "title": "Many changes replace the nodes rather than modify them",
+      "detail": "A plan change or a maintenance update generally builds new nodes and moves service to them, so node names change and anything pinned to a host or an IP breaks. This is why a plan change on a single-node service is downtime rather than a resize.",
+      "docUrl": "https://aiven.io/docs/platform/howto/scale-services",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "disk-without-plan",
+      "serviceTypes": [
+        "*"
+      ],
+      "kind": "differs from upstream",
+      "title": "Disk can sometimes grow without a plan change",
+      "detail": "On plans that support it, storage is added to the running service, which makes \"we are running out of disk\" a smaller problem here than the upstream instinct of provisioning a bigger machine. Whether this service is one of them is in the plan block.",
+      "docUrl": "https://aiven.io/docs/platform/concepts/dynamic-disk-sizing",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "backup-is-fork",
+      "serviceTypes": [
+        "*"
+      ],
+      "kind": "differs from upstream",
+      "title": "Restoring means forking to a new service",
+      "detail": "Backups are not restored in place. The supported path creates a new service at a point in time, which you then move traffic to — so a restore is a migration with a connection-string change, not an afternoon of pg_restore. Worth knowing before promising a rollback that assumes otherwise.",
+      "docUrl": "https://aiven.io/docs/platform/howto/console-fork-service",
+      "reviewed": "2026-09-15"
+    }
+  ],
+  "summary": "clickhouse-2a6274d2 is ClickHouse, currently RUNNING, important in production. Analytics warehouse. It holds 5 catalogued datasets and 53 described columns. Acting here eventually reaches trino-hub. 5 findings, worst: Reachable from 0.0.0.0/0 (danger). Unattended, an agent may read metadata and read metrics. Forbidden: delete the service and drop a table. A change freeze is in force: Data Innovation Summit. The project is on stage, so nothing changes unattended, however good the reason. Policy basis: written for this service, overriding what its criticality would give it.",
+  "data": {
+    "datasets": 5,
+    "columns": 53,
+    "assets": [
+      {
+        "id": "ch.service_kafka.customers",
+        "name": "customers",
+        "kind": "clickhouse_table",
+        "qualifiedName": "clickhouse-2a6274d2.service_kafka-1b5cb1e7.customers",
+        "description": "ClickHouse Kafka engine table. Group ch-webshop-customers-avro-v1, AvroConfluent, offset latest.",
+        "tags": [
+          "cdc",
+          "avro"
+        ],
+        "columns": [
+          {
+            "name": "id",
+            "type": "Int64",
+            "nullable": false,
+            "note": "Surrogate key; orders.customer_id points here"
+          },
+          {
+            "name": "email",
+            "type": "String",
+            "nullable": false,
+            "note": "Contact address, and the key the loader upserts on"
+          },
+          {
+            "name": "name",
+            "type": "String",
+            "nullable": false,
+            "note": "Customer full name; personal data"
+          },
+          {
+            "name": "region",
+            "type": "String",
+            "nullable": false,
+            "note": "Sales region, the grain campaigns are targeted at"
+          },
+          {
+            "name": "country",
+            "type": "String",
+            "nullable": false,
+            "note": "Country within the region"
+          },
+          {
+            "name": "created_at",
+            "type": "String",
+            "nullable": false,
+            "note": "Insert time, set by the database"
+          },
+          {
+            "name": "updated_at",
+            "type": "String",
+            "nullable": false,
+            "note": "Last write; no UPDATE of this table was captured, so it tracks created_at"
+          },
+          {
+            "name": "__op",
+            "type": "String",
+            "nullable": true,
+            "note": "Debezium op (c/u/d/r)"
+          },
+          {
+            "name": "__source_ts_ms",
+            "type": "Int64",
+            "nullable": true,
+            "note": "Source commit timestamp"
+          },
+          {
+            "name": "__deleted",
+            "type": "String",
+            "nullable": true,
+            "note": "ExtractNewRecordState flag"
+          }
+        ],
+        "deletion": {
+          "assetId": "ch.service_kafka.customers",
+          "verdict": "cannot tell",
+          "because": "Nothing here shows it being used, but no tool here can see who reads a clickhouse table. Absent evidence is not evidence of absence, so this is a question for somebody who knows the system rather than a verdict.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Usage telemetry",
+              "found": "Nothing in this snapshot reports reads of a clickhouse table",
+              "source": "—"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "ch.service_kafka.products",
+        "name": "products",
+        "kind": "clickhouse_table",
+        "qualifiedName": "clickhouse-2a6274d2.service_kafka-1b5cb1e7.products",
+        "description": "ClickHouse Kafka engine table for product CDC.",
+        "tags": [
+          "cdc",
+          "avro"
+        ],
+        "columns": [
+          {
+            "name": "id",
+            "type": "Int64",
+            "nullable": false,
+            "note": "Surrogate key; order_items.product_id points here"
+          },
+          {
+            "name": "sku",
+            "type": "String",
+            "nullable": false,
+            "note": "Stock keeping unit, the business key"
+          },
+          {
+            "name": "name",
+            "type": "String",
+            "nullable": false,
+            "note": "Product display name"
+          },
+          {
+            "name": "category",
+            "type": "String",
+            "nullable": false,
+            "note": "Merchandising category"
+          },
+          {
+            "name": "price",
+            "type": "String",
+            "nullable": false,
+            "note": "Current unit price; order_items.unit_price keeps the price actually charged"
+          },
+          {
+            "name": "inventory",
+            "type": "Int32",
+            "nullable": false,
+            "note": "Units in stock, decremented per order item and floored at 0"
+          },
+          {
+            "name": "created_at",
+            "type": "String",
+            "nullable": false,
+            "note": "Insert time, set by the database"
+          },
+          {
+            "name": "updated_at",
+            "type": "String",
+            "nullable": false,
+            "note": "Bumped by every price and inventory write"
+          },
+          {
+            "name": "__op",
+            "type": "String",
+            "nullable": true,
+            "note": "Debezium op (c/u/d/r)"
+          },
+          {
+            "name": "__source_ts_ms",
+            "type": "Int64",
+            "nullable": true,
+            "note": "Source commit timestamp"
+          },
+          {
+            "name": "__deleted",
+            "type": "String",
+            "nullable": true,
+            "note": "ExtractNewRecordState flag"
+          }
+        ],
+        "deletion": {
+          "assetId": "ch.service_kafka.products",
+          "verdict": "cannot tell",
+          "because": "Nothing here shows it being used, but no tool here can see who reads a clickhouse table. Absent evidence is not evidence of absence, so this is a question for somebody who knows the system rather than a verdict.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Usage telemetry",
+              "found": "Nothing in this snapshot reports reads of a clickhouse table",
+              "source": "—"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "ch.service_kafka.orders",
+        "name": "orders",
+        "kind": "clickhouse_table",
+        "qualifiedName": "clickhouse-2a6274d2.service_kafka-1b5cb1e7.orders",
+        "description": "ClickHouse Kafka engine table for order CDC.",
+        "tags": [
+          "cdc",
+          "avro"
+        ],
+        "columns": [
+          {
+            "name": "id",
+            "type": "Int64",
+            "nullable": false,
+            "note": "Surrogate key; order_items.order_id points here"
+          },
+          {
+            "name": "customer_id",
+            "type": "Int64",
+            "nullable": false,
+            "note": "FK to customers.id"
+          },
+          {
+            "name": "status",
+            "type": "String",
+            "nullable": false,
+            "note": "Lifecycle state, starts at pending and is advanced in place"
+          },
+          {
+            "name": "total",
+            "type": "String",
+            "nullable": false,
+            "note": "Order value, rewritten once the line items exist"
+          },
+          {
+            "name": "region",
+            "type": "String",
+            "nullable": false,
+            "note": "Copied from the customer's region so reporting need not join"
+          },
+          {
+            "name": "created_at",
+            "type": "String",
+            "nullable": false,
+            "note": "Insert time, set by the database"
+          },
+          {
+            "name": "updated_at",
+            "type": "String",
+            "nullable": false,
+            "note": "Bumped by every status and total write"
+          },
+          {
+            "name": "__op",
+            "type": "String",
+            "nullable": true,
+            "note": "Debezium op (c/u/d/r)"
+          },
+          {
+            "name": "__source_ts_ms",
+            "type": "Int64",
+            "nullable": true,
+            "note": "Source commit timestamp"
+          },
+          {
+            "name": "__deleted",
+            "type": "String",
+            "nullable": true,
+            "note": "ExtractNewRecordState flag"
+          }
+        ],
+        "deletion": {
+          "assetId": "ch.service_kafka.orders",
+          "verdict": "unsafe",
+          "because": "Something is using it: 1 catalogued downstream reader. Deleting it breaks that, and the break is not reversible by re-creating an empty one.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "1 catalogued hop out: trino-hub.summit_clickhouse",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Usage telemetry",
+              "found": "Nothing in this snapshot reports reads of a clickhouse table",
+              "source": "—"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "ch.service_kafka.order_items",
+        "name": "order_items",
+        "kind": "clickhouse_table",
+        "qualifiedName": "clickhouse-2a6274d2.service_kafka-1b5cb1e7.order_items",
+        "description": "ClickHouse Kafka engine table for order item CDC.",
+        "tags": [
+          "cdc",
+          "avro"
+        ],
+        "columns": [
+          {
+            "name": "id",
+            "type": "Int64",
+            "nullable": false,
+            "note": "Surrogate key"
+          },
+          {
+            "name": "order_id",
+            "type": "Int64",
+            "nullable": false,
+            "note": "FK to orders.id"
+          },
+          {
+            "name": "product_id",
+            "type": "Int64",
+            "nullable": false,
+            "note": "FK to products.id"
+          },
+          {
+            "name": "quantity",
+            "type": "Int32",
+            "nullable": false,
+            "note": "Units ordered; the same amount leaves products.inventory"
+          },
+          {
+            "name": "unit_price",
+            "type": "String",
+            "nullable": false,
+            "note": "Price charged at order time, deliberately not the current products.price"
+          },
+          {
+            "name": "__op",
+            "type": "String",
+            "nullable": true,
+            "note": "Debezium op (c/u/d/r)"
+          },
+          {
+            "name": "__source_ts_ms",
+            "type": "Int64",
+            "nullable": true,
+            "note": "Source commit timestamp"
+          },
+          {
+            "name": "__deleted",
+            "type": "String",
+            "nullable": true,
+            "note": "ExtractNewRecordState flag"
+          }
+        ],
+        "deletion": {
+          "assetId": "ch.service_kafka.order_items",
+          "verdict": "cannot tell",
+          "because": "Nothing here shows it being used, but no tool here can see who reads a clickhouse table. Absent evidence is not evidence of absence, so this is a question for somebody who knows the system rather than a verdict.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Usage telemetry",
+              "found": "Nothing in this snapshot reports reads of a clickhouse table",
+              "source": "—"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "ch.pg.marketing.campaigns",
+        "name": "campaigns",
+        "kind": "clickhouse_table",
+        "qualifiedName": "clickhouse-2a6274d2.service_pg-37c7de3b.marketing.campaigns",
+        "description": "PostgreSQL engine over marketing.campaigns via clickhouse_postgresql.",
+        "rowCount": 16,
+        "tags": [
+          "marketing",
+          "federation"
+        ],
+        "columns": [
+          {
+            "name": "id",
+            "type": "bigint",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Surrogate key"
+          },
+          {
+            "name": "name",
+            "type": "text",
+            "constraint": "UQ",
+            "nullable": false,
+            "note": "Campaign name, unique"
+          },
+          {
+            "name": "region",
+            "type": "text",
+            "nullable": false,
+            "note": "Sales region targeted, same vocabulary as customers.region"
+          },
+          {
+            "name": "country",
+            "type": "text",
+            "nullable": true,
+            "note": "Single-country target; null means the whole region"
+          },
+          {
+            "name": "channel",
+            "type": "text",
+            "nullable": false,
+            "note": "Channel the campaign runs on"
+          },
+          {
+            "name": "start_date",
+            "type": "date",
+            "nullable": false,
+            "note": "First day the campaign is live"
+          },
+          {
+            "name": "end_date",
+            "type": "date",
+            "nullable": false,
+            "note": "Last day the campaign is live"
+          },
+          {
+            "name": "discount_pct",
+            "type": "numeric(5,2)",
+            "nullable": false,
+            "note": "Discount offered, in percent"
+          },
+          {
+            "name": "budget_eur",
+            "type": "numeric(12,2)",
+            "nullable": false,
+            "note": "Planned spend, EUR"
+          },
+          {
+            "name": "target_revenue_eur",
+            "type": "numeric(12,2)",
+            "nullable": false,
+            "note": "Revenue this campaign is meant to bring in, EUR"
+          },
+          {
+            "name": "status",
+            "type": "text",
+            "nullable": false,
+            "note": "Campaign state, starts at planned"
+          },
+          {
+            "name": "description",
+            "type": "text",
+            "nullable": true,
+            "note": "Free-text brief"
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz",
+            "nullable": false,
+            "note": "Insert time, set by the database"
+          },
+          {
+            "name": "updated_at",
+            "type": "timestamptz",
+            "nullable": false,
+            "note": "Last edit time"
+          }
+        ],
+        "deletion": {
+          "assetId": "ch.pg.marketing.campaigns",
+          "verdict": "cannot tell",
+          "because": "Nothing here shows it being used, but no tool here can see who reads a clickhouse table. Absent evidence is not evidence of absence, so this is a question for somebody who knows the system rather than a verdict.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Usage telemetry",
+              "found": "Nothing in this snapshot reports reads of a clickhouse table",
+              "source": "—"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      }
+    ],
+    "note": "Descriptions and tags as catalogued. Edits made in the browser live in that browser and are not in this file."
+  },
+  "lineage": {
+    "upstreamServices": [
+      "kafka-1b5cb1e7",
+      "pg-37c7de3b"
+    ],
+    "downstreamServices": [
+      "trino-hub"
+    ],
+    "reachesEventually": [
+      "trino-hub"
+    ],
+    "inbound": [
+      {
+        "from": "kafka.webshop.public.customers",
+        "to": "ch.service_kafka.customers",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "id"
+      },
+      {
+        "from": "kafka.webshop.public.customers",
+        "to": "ch.service_kafka.customers",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "email"
+      },
+      {
+        "from": "kafka.webshop.public.customers",
+        "to": "ch.service_kafka.customers",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "name"
+      },
+      {
+        "from": "kafka.webshop.public.customers",
+        "to": "ch.service_kafka.customers",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "region"
+      },
+      {
+        "from": "kafka.webshop.public.customers",
+        "to": "ch.service_kafka.customers",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "country"
+      },
+      {
+        "from": "kafka.webshop.public.customers",
+        "to": "ch.service_kafka.customers",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "created_at"
+      },
+      {
+        "from": "kafka.webshop.public.customers",
+        "to": "ch.service_kafka.customers",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "updated_at"
+      },
+      {
+        "from": "kafka.webshop.public.customers",
+        "to": "ch.service_kafka.customers",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "__op"
+      },
+      {
+        "from": "kafka.webshop.public.customers",
+        "to": "ch.service_kafka.customers",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "__source_ts_ms"
+      },
+      {
+        "from": "kafka.webshop.public.customers",
+        "to": "ch.service_kafka.customers",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "__deleted"
+      },
+      {
+        "from": "kafka.webshop.public.products",
+        "to": "ch.service_kafka.products",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "id"
+      },
+      {
+        "from": "kafka.webshop.public.products",
+        "to": "ch.service_kafka.products",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "sku"
+      },
+      {
+        "from": "kafka.webshop.public.products",
+        "to": "ch.service_kafka.products",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "name"
+      },
+      {
+        "from": "kafka.webshop.public.products",
+        "to": "ch.service_kafka.products",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "category"
+      },
+      {
+        "from": "kafka.webshop.public.products",
+        "to": "ch.service_kafka.products",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "price"
+      },
+      {
+        "from": "kafka.webshop.public.products",
+        "to": "ch.service_kafka.products",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "inventory"
+      },
+      {
+        "from": "kafka.webshop.public.products",
+        "to": "ch.service_kafka.products",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "created_at"
+      },
+      {
+        "from": "kafka.webshop.public.products",
+        "to": "ch.service_kafka.products",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "updated_at"
+      },
+      {
+        "from": "kafka.webshop.public.products",
+        "to": "ch.service_kafka.products",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "__op"
+      },
+      {
+        "from": "kafka.webshop.public.products",
+        "to": "ch.service_kafka.products",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "__source_ts_ms"
+      },
+      {
+        "from": "kafka.webshop.public.products",
+        "to": "ch.service_kafka.products",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "__deleted"
+      },
+      {
+        "from": "kafka.webshop.public.orders",
+        "to": "ch.service_kafka.orders",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "id"
+      },
+      {
+        "from": "kafka.webshop.public.orders",
+        "to": "ch.service_kafka.orders",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "customer_id"
+      },
+      {
+        "from": "kafka.webshop.public.orders",
+        "to": "ch.service_kafka.orders",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "status"
+      },
+      {
+        "from": "kafka.webshop.public.orders",
+        "to": "ch.service_kafka.orders",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "total"
+      },
+      {
+        "from": "kafka.webshop.public.orders",
+        "to": "ch.service_kafka.orders",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "region"
+      },
+      {
+        "from": "kafka.webshop.public.orders",
+        "to": "ch.service_kafka.orders",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "created_at"
+      },
+      {
+        "from": "kafka.webshop.public.orders",
+        "to": "ch.service_kafka.orders",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "updated_at"
+      },
+      {
+        "from": "kafka.webshop.public.orders",
+        "to": "ch.service_kafka.orders",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "__op"
+      },
+      {
+        "from": "kafka.webshop.public.orders",
+        "to": "ch.service_kafka.orders",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "__source_ts_ms"
+      },
+      {
+        "from": "kafka.webshop.public.orders",
+        "to": "ch.service_kafka.orders",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "__deleted"
+      },
+      {
+        "from": "kafka.webshop.public.order_items",
+        "to": "ch.service_kafka.order_items",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "id"
+      },
+      {
+        "from": "kafka.webshop.public.order_items",
+        "to": "ch.service_kafka.order_items",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "order_id"
+      },
+      {
+        "from": "kafka.webshop.public.order_items",
+        "to": "ch.service_kafka.order_items",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "product_id"
+      },
+      {
+        "from": "kafka.webshop.public.order_items",
+        "to": "ch.service_kafka.order_items",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "quantity"
+      },
+      {
+        "from": "kafka.webshop.public.order_items",
+        "to": "ch.service_kafka.order_items",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "unit_price"
+      },
+      {
+        "from": "kafka.webshop.public.order_items",
+        "to": "ch.service_kafka.order_items",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "__op"
+      },
+      {
+        "from": "kafka.webshop.public.order_items",
+        "to": "ch.service_kafka.order_items",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "__source_ts_ms"
+      },
+      {
+        "from": "kafka.webshop.public.order_items",
+        "to": "ch.service_kafka.order_items",
+        "fromService": "kafka-1b5cb1e7",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_kafka · AvroConfluent",
+        "kind": "kafka_ingest",
+        "confidence": "column",
+        "column": "__deleted"
+      },
+      {
+        "from": "pg.marketing.campaigns",
+        "to": "ch.pg.marketing.campaigns",
+        "fromService": "pg-37c7de3b",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_postgresql · defaultdb.marketing",
+        "kind": "pg_federate",
+        "confidence": "column",
+        "column": "id"
+      },
+      {
+        "from": "pg.marketing.campaigns",
+        "to": "ch.pg.marketing.campaigns",
+        "fromService": "pg-37c7de3b",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_postgresql · defaultdb.marketing",
+        "kind": "pg_federate",
+        "confidence": "column",
+        "column": "name"
+      },
+      {
+        "from": "pg.marketing.campaigns",
+        "to": "ch.pg.marketing.campaigns",
+        "fromService": "pg-37c7de3b",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_postgresql · defaultdb.marketing",
+        "kind": "pg_federate",
+        "confidence": "column",
+        "column": "region"
+      },
+      {
+        "from": "pg.marketing.campaigns",
+        "to": "ch.pg.marketing.campaigns",
+        "fromService": "pg-37c7de3b",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_postgresql · defaultdb.marketing",
+        "kind": "pg_federate",
+        "confidence": "column",
+        "column": "country"
+      },
+      {
+        "from": "pg.marketing.campaigns",
+        "to": "ch.pg.marketing.campaigns",
+        "fromService": "pg-37c7de3b",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_postgresql · defaultdb.marketing",
+        "kind": "pg_federate",
+        "confidence": "column",
+        "column": "channel"
+      },
+      {
+        "from": "pg.marketing.campaigns",
+        "to": "ch.pg.marketing.campaigns",
+        "fromService": "pg-37c7de3b",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_postgresql · defaultdb.marketing",
+        "kind": "pg_federate",
+        "confidence": "column",
+        "column": "start_date"
+      },
+      {
+        "from": "pg.marketing.campaigns",
+        "to": "ch.pg.marketing.campaigns",
+        "fromService": "pg-37c7de3b",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_postgresql · defaultdb.marketing",
+        "kind": "pg_federate",
+        "confidence": "column",
+        "column": "end_date"
+      },
+      {
+        "from": "pg.marketing.campaigns",
+        "to": "ch.pg.marketing.campaigns",
+        "fromService": "pg-37c7de3b",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_postgresql · defaultdb.marketing",
+        "kind": "pg_federate",
+        "confidence": "column",
+        "column": "discount_pct"
+      },
+      {
+        "from": "pg.marketing.campaigns",
+        "to": "ch.pg.marketing.campaigns",
+        "fromService": "pg-37c7de3b",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_postgresql · defaultdb.marketing",
+        "kind": "pg_federate",
+        "confidence": "column",
+        "column": "budget_eur"
+      },
+      {
+        "from": "pg.marketing.campaigns",
+        "to": "ch.pg.marketing.campaigns",
+        "fromService": "pg-37c7de3b",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_postgresql · defaultdb.marketing",
+        "kind": "pg_federate",
+        "confidence": "column",
+        "column": "target_revenue_eur"
+      },
+      {
+        "from": "pg.marketing.campaigns",
+        "to": "ch.pg.marketing.campaigns",
+        "fromService": "pg-37c7de3b",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_postgresql · defaultdb.marketing",
+        "kind": "pg_federate",
+        "confidence": "column",
+        "column": "status"
+      },
+      {
+        "from": "pg.marketing.campaigns",
+        "to": "ch.pg.marketing.campaigns",
+        "fromService": "pg-37c7de3b",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_postgresql · defaultdb.marketing",
+        "kind": "pg_federate",
+        "confidence": "column",
+        "column": "description"
+      },
+      {
+        "from": "pg.marketing.campaigns",
+        "to": "ch.pg.marketing.campaigns",
+        "fromService": "pg-37c7de3b",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_postgresql · defaultdb.marketing",
+        "kind": "pg_federate",
+        "confidence": "column",
+        "column": "created_at"
+      },
+      {
+        "from": "pg.marketing.campaigns",
+        "to": "ch.pg.marketing.campaigns",
+        "fromService": "pg-37c7de3b",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_postgresql · defaultdb.marketing",
+        "kind": "pg_federate",
+        "confidence": "column",
+        "column": "updated_at"
+      }
+    ],
+    "outbound": [
+      {
+        "from": "ch.service_kafka.orders",
+        "to": "trino.summit_clickhouse",
+        "fromService": "clickhouse-2a6274d2",
+        "toService": "trino-hub",
+        "via": "Trino catalog summit_clickhouse",
+        "kind": "query_federation",
+        "confidence": "dataset"
+      }
+    ],
+    "internalHops": 0,
+    "integrations": [
+      {
+        "type": "clickhouse_kafka",
+        "thisServiceIs": "destination",
+        "peer": "kafka-1b5cb1e7",
+        "active": true,
+        "description": "Four AvroConfluent Kafka engine tables, column-mapped."
+      },
+      {
+        "type": "clickhouse_postgresql",
+        "thisServiceIs": "destination",
+        "peer": "pg-37c7de3b",
+        "active": true,
+        "description": "Federates defaultdb.marketing into ClickHouse."
+      },
+      {
+        "type": "trino_catalog",
+        "thisServiceIs": "source",
+        "peer": "trino-hub",
+        "active": true,
+        "description": "Trino catalog summit_clickhouse, configured inside the Trino application."
+      }
+    ],
+    "note": "Lineage is catalogued from connector configuration and schemas, not traced at runtime. A `dataset` confidence means the tables are known to be connected without the column mapping being read."
+  },
+  "boundaries": {
+    "doNotRead": [],
+    "handleCarefully": [],
+    "note": "These come from the data, and apply to reads. What may be done to the service itself is in `policy`, and an operation absent from all three of its lists is one nobody has considered: treat it as forbidden."
+  }
+}

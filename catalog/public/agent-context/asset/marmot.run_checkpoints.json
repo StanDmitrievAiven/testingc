@@ -1,0 +1,105 @@
+{
+  "assetId": "marmot.run_checkpoints",
+  "name": "run_checkpoints",
+  "qualifiedName": "marmot-pg.public.run_checkpoints",
+  "kind": "table",
+  "serviceId": "marmot-pg",
+  "serviceName": "marmot-pg",
+  "serviceType": "PostgreSQL",
+  "description": "Marmot catalog table run_checkpoints. 7 columns in the database; the snapshot keeps its key columns, which are what the data model is drawn from.",
+  "descriptionReview": {
+    "author": "the catalog snapshot",
+    "at": "2026-09-15",
+    "state": "accepted",
+    "sources": [
+      "this catalog, authored when the project was walked"
+    ]
+  },
+  "owners": [],
+  "tags": [
+    {
+      "tag": "marmot",
+      "meaning": "Belongs to the Marmot catalog service and its schema."
+    }
+  ],
+  "columns": [
+    {
+      "name": "id",
+      "type": "uuid",
+      "constraint": "PK",
+      "nullable": false,
+      "note": "Primary key."
+    },
+    {
+      "name": "run_id",
+      "type": "uuid",
+      "constraint": "FK",
+      "nullable": false,
+      "note": "references runs.id."
+    }
+  ],
+  "facts": [
+    {
+      "what": "Columns",
+      "value": "2",
+      "origin": "captured",
+      "source": "this catalog, from the service schema"
+    },
+    {
+      "what": "Last write",
+      "value": "Unknown. No tool read for this project reports a last-write or last-produce time.",
+      "origin": "derived",
+      "source": "the set of tools read for this project"
+    }
+  ],
+  "findings": [],
+  "deletion": {
+    "assetId": "marmot.run_checkpoints",
+    "verdict": "unsafe",
+    "because": "Something is using it: a recorded statement names it. Deleting it breaks that, and the break is not reversible by re-creating an empty one.",
+    "evidence": [
+      {
+        "what": "Downstream readers",
+        "found": "None catalogued",
+        "source": "this catalog, from connector configuration and schemas"
+      },
+      {
+        "what": "Recorded statements",
+        "found": "Named by at least one of the 84 recorded statements",
+        "source": "pg_stat_statements, all 84 read 2026-09-15"
+      },
+      {
+        "what": "Last write",
+        "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+        "source": "—"
+      }
+    ]
+  },
+  "diagnosis": {
+    "assetId": "marmot.run_checkpoints",
+    "name": "marmot-pg.public.run_checkpoints",
+    "chain": [],
+    "verdict": "Nothing feeds marmot-pg.public.run_checkpoints in this catalog, so there is no upstream chain to blame. If it looks wrong, the cause is in whatever writes it or in the thing reading it.",
+    "freshness": "No hop in this chain measures its own delay, so there is no end-to-end figure. Consumer lag is the only latency this project captures, and there is no Kafka hop here to read it from.",
+    "boundary": "The walk stops where Aiven can see: the last hop inside the platform. Whatever reads the end of this chain — a dashboard, a job, somebody's notebook — is invisible here, and is where a symptom nothing upstream explains usually turns out to live."
+  },
+  "policy": {
+    "serviceId": "marmot-pg",
+    "allowed": [
+      "read metadata",
+      "read metrics",
+      "apply pending maintenance"
+    ],
+    "needsApproval": [
+      "restart",
+      "change plan",
+      "change ip filter"
+    ],
+    "forbidden": [
+      "delete the service"
+    ],
+    "because": "Standard means an outage degrades a tool rather than a pipeline. Maintenance can go in unattended, since the alternative is Aiven applying it at its own deadline anyway.",
+    "basis": "derived from standard criticality in a production environment"
+  },
+  "note": "Descriptions, tags and owners are editable in the browser, and those edits live in that browser rather than in this file. Everything marked captured names the Aiven tool it came from and when it was read."
+}

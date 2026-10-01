@@ -1,0 +1,180 @@
+{
+  "assetId": "pg.public.orders",
+  "name": "orders",
+  "qualifiedName": "pg-37c7de3b.public.orders",
+  "kind": "table",
+  "serviceId": "pg-37c7de3b",
+  "serviceName": "pg-37c7de3b",
+  "serviceType": "PostgreSQL",
+  "description": "Orders written by webshop-simulator. FK to customers.",
+  "descriptionReview": {
+    "author": "the catalog snapshot",
+    "at": "2026-09-15",
+    "state": "accepted",
+    "sources": [
+      "this catalog, authored when the project was walked"
+    ]
+  },
+  "owners": [],
+  "tags": [
+    {
+      "tag": "webshop",
+      "meaning": "The webshop order flow: customers, products, orders and line items."
+    },
+    {
+      "tag": "cdc",
+      "meaning": "Captured by change data capture, so every row change is replicated downstream."
+    },
+    {
+      "tag": "fact",
+      "meaning": "A fact table: one row per event or transaction, with measures meant to be aggregated."
+    }
+  ],
+  "columns": [
+    {
+      "name": "id",
+      "type": "bigint",
+      "constraint": "PK",
+      "nullable": false,
+      "note": "Surrogate key; order_items.order_id points here"
+    },
+    {
+      "name": "customer_id",
+      "type": "bigint",
+      "constraint": "FK",
+      "nullable": false,
+      "note": "FK to customers.id"
+    },
+    {
+      "name": "status",
+      "type": "text",
+      "nullable": false,
+      "note": "Lifecycle state, starts at pending and is advanced in place"
+    },
+    {
+      "name": "total",
+      "type": "numeric(12,2)",
+      "nullable": false,
+      "note": "Order value, rewritten once the line items exist"
+    },
+    {
+      "name": "region",
+      "type": "text",
+      "nullable": false,
+      "note": "Copied from the customer's region so reporting need not join"
+    },
+    {
+      "name": "created_at",
+      "type": "timestamptz",
+      "nullable": false,
+      "note": "Insert time, set by the database"
+    },
+    {
+      "name": "updated_at",
+      "type": "timestamptz",
+      "nullable": false,
+      "note": "Bumped by every status and total write"
+    }
+  ],
+  "facts": [
+    {
+      "what": "Rows",
+      "value": "6,258,540",
+      "origin": "captured",
+      "source": "this catalog, from the service schema"
+    },
+    {
+      "what": "Columns",
+      "value": "7",
+      "origin": "captured",
+      "source": "this catalog, from the service schema"
+    },
+    {
+      "what": "Last write",
+      "value": "Unknown. No tool read for this project reports a last-write or last-produce time.",
+      "origin": "derived",
+      "source": "the set of tools read for this project"
+    }
+  ],
+  "findings": [],
+  "deletion": {
+    "assetId": "pg.public.orders",
+    "verdict": "unsafe",
+    "because": "Something is using it: 8 catalogued downstream readers, an application writes into it, 1 foreign key points at it, so the drop fails on the constraint, 699,933 recorded calls. Deleting it breaks that, and the break is not reversible by re-creating an empty one.",
+    "evidence": [
+      {
+        "what": "Downstream readers",
+        "found": "8 catalogued hops out: kafka-1b5cb1e7.webshop.public.orders, trino-hub.summit_pg",
+        "source": "this catalog, from connector configuration and schemas"
+      },
+      {
+        "what": "Writers",
+        "found": "Written by application.webshop-simulator",
+        "source": "this catalog, from application configuration"
+      },
+      {
+        "what": "Foreign keys pointing at it",
+        "found": "1 referencing table: pg-37c7de3b.public.order_items",
+        "source": "pg_constraint"
+      },
+      {
+        "what": "Recorded statements",
+        "found": "Named by recorded statements, 699,933 calls across the 5 slowest",
+        "source": "pg_stat_statements, all 99 read 2026-09-15"
+      },
+      {
+        "what": "Last write",
+        "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+        "source": "—"
+      }
+    ]
+  },
+  "cost": {
+    "usdPerMonth": 62.28,
+    "share": 0.56504,
+    "basis": "statement time",
+    "method": "56.5% of the total statement time captured on this service, applied to $110.23 a month. It apportions the bill by load rather than measuring what the table costs, and the bill does not fall until the plan does."
+  },
+  "diagnosis": {
+    "assetId": "pg.public.orders",
+    "name": "pg-37c7de3b.public.orders",
+    "chain": [
+      {
+        "assetId": "app.webshop-simulator",
+        "name": "application.webshop-simulator",
+        "serviceId": "webshop-simulator",
+        "serviceName": "webshop-simulator",
+        "distance": 1,
+        "via": "application_service_credential",
+        "health": "unknown",
+        "why": "No facts or metrics were captured for this service, so it cannot be cleared or blamed.",
+        "findings": []
+      }
+    ],
+    "verdict": "Nothing upstream of pg-37c7de3b.public.orders has been captured — 1 hop upstream across 1 services, none of it read — so this cannot tell you anything yet. The chain is drawn; the health is missing.",
+    "freshness": "No hop in this chain measures its own delay, so there is no end-to-end figure. Consumer lag is the only latency this project captures, and there is no Kafka hop here to read it from.",
+    "boundary": "The walk stops where Aiven can see: the last hop inside the platform. Whatever reads the end of this chain — a dashboard, a job, somebody's notebook — is invisible here, and is where a symptom nothing upstream explains usually turns out to live."
+  },
+  "policy": {
+    "serviceId": "pg-37c7de3b",
+    "allowed": [
+      "read metadata",
+      "read metrics",
+      "read query statistics"
+    ],
+    "needsApproval": [
+      "restart",
+      "change plan",
+      "change ip filter",
+      "terminate a session"
+    ],
+    "forbidden": [
+      "delete the service",
+      "drop the replication slot",
+      "disable backups"
+    ],
+    "because": "Single node holding the webshop source of truth, and the CDC connector reads its replication slot: dropping that slot loses changes that no downstream copy can reconstruct.",
+    "basis": "written for this service, overriding what its criticality would give it"
+  },
+  "note": "Descriptions, tags and owners are editable in the browser, and those edits live in that browser rather than in this file. Everything marked captured names the Aiven tool it came from and when it was read."
+}

@@ -1,0 +1,3459 @@
+{
+  "serviceId": "marmot-pg",
+  "name": "marmot-pg",
+  "type": "pg",
+  "coverage": {
+    "facts": true,
+    "metrics": false,
+    "classified": true,
+    "policy": true,
+    "contact": true
+  },
+  "classification": {
+    "serviceId": "marmot-pg",
+    "environment": "production",
+    "criticality": "standard",
+    "provenance": "inferred",
+    "evidence": "The catalog store behind the Marmot application. It holds descriptions of data rather than data, and a failure degrades a tool rather than a pipeline."
+  },
+  "objectives": [
+    {
+      "id": "disk-headroom",
+      "appliesTo": [
+        "*"
+      ],
+      "title": "At least a quarter of a year of disk runway",
+      "target": 90,
+      "unit": "days to full",
+      "breach": 30,
+      "rationale": "Ninety days is long enough to plan a plan change into a maintenance window and get it approved. Thirty is short enough that the window is now, because on a single node growing the disk is an outage that has to be scheduled with whoever depends on it.",
+      "owner": "Data platform team",
+      "reviewed": "2026-09-08"
+    },
+    {
+      "id": "evidence-freshness",
+      "appliesTo": [
+        "*"
+      ],
+      "title": "Evidence no more than a day behind the snapshot it arrived in",
+      "target": 24,
+      "unit": "hours behind capture",
+      "rationale": "A capacity claim is worth exactly as much as the reading under it. A day is the point where a trend computed from the numbers stops describing the service as it is now, and an agent acting on it is acting on history.",
+      "owner": "Data platform team",
+      "reviewed": "2026-09-08"
+    },
+    {
+      "id": "cpu-spike",
+      "appliesTo": [
+        "*"
+      ],
+      "title": "A peak worth naming",
+      "target": 50,
+      "unit": "percent peak",
+      "rationale": "Below half a core-equivalent nothing is worth reporting. This decides only whether a spike gets mentioned, never whether anything is done about it.",
+      "owner": "Data platform team",
+      "reviewed": "2026-09-08"
+    },
+    {
+      "id": "cpu-sustained",
+      "appliesTo": [
+        "*"
+      ],
+      "title": "Sustained load, as opposed to bursts",
+      "target": 20,
+      "unit": "percent average",
+      "rationale": "Under a fifth on average, a high peak is a query arriving rather than a service running out of room. The pair matters because resizing on a peak is the most common expensive mistake available here.",
+      "owner": "Data platform team",
+      "reviewed": "2026-09-08"
+    },
+    {
+      "id": "downsize-headroom",
+      "appliesTo": [
+        "*"
+      ],
+      "title": "A smaller plan must still leave a third of its disk free",
+      "target": 67,
+      "unit": "percent of the smaller disk in use",
+      "rationale": "The saving is worth having and the second migration is not. Moving down to a rung that is already two-thirds full buys a few pounds a month and a disk-full incident a quarter later, which costs more than the plan ever saved. A third free is the margin that makes the move a decision rather than a bet on growth stopping.",
+      "owner": "Data platform team",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "downsize-utilisation",
+      "appliesTo": [
+        "*"
+      ],
+      "title": "Peaks well inside the plan before shrinking it",
+      "target": 60,
+      "unit": "percent peak of any resource",
+      "rationale": "Averages are what make downsizing look free: a service at five percent mean CPU that touches sixty-five under load will meet that load on a smaller plan too, and meet it worse. The peak is the number the plan actually has to survive, so it is the one that decides.",
+      "owner": "Data platform team",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "backup-freshness",
+      "appliesTo": [
+        "*"
+      ],
+      "title": "A restore point from within the last two days",
+      "target": 48,
+      "unit": "hours since the last backup",
+      "breach": 168,
+      "rationale": "Aiven takes daily backups, so two days allows one to fail without raising anything. A week means the restore point has quietly moved from yesterday to last Tuesday, which is only discovered at the worst possible moment.",
+      "owner": "Data platform team",
+      "reviewed": "2026-09-15"
+    }
+  ],
+  "capabilities": {
+    "nodes": 1,
+    "failoverAvailable": false,
+    "diskGb": 8,
+    "maxConnections": 25,
+    "canAddDisk": false,
+    "backupsRetained": 2,
+    "latestBackupAt": "2026-09-14T10:08:05Z",
+    "source": "aiven_service_get"
+  },
+  "captured": {
+    "catalog": "2026-09-07T07:20:00Z",
+    "serviceFacts": "2026-09-15T08:20:00Z",
+    "metrics": "2026-09-08T10:55:00Z",
+    "connectors": "2026-09-08T10:58:00Z",
+    "purposeLog": "2026-09-04T12:05:41.806Z",
+    "policy": "authored, not captured"
+  },
+  "policy": {
+    "serviceId": "marmot-pg",
+    "allowed": [
+      "read metadata",
+      "read metrics",
+      "apply pending maintenance"
+    ],
+    "needsApproval": [
+      "restart",
+      "change plan",
+      "change ip filter"
+    ],
+    "forbidden": [
+      "delete the service"
+    ],
+    "because": "Standard means an outage degrades a tool rather than a pipeline. Maintenance can go in unattended, since the alternative is Aiven applying it at its own deadline anyway.",
+    "basis": "derived from standard criticality in a production environment"
+  },
+  "freeze": {
+    "active": true,
+    "from": "2026-09-08T00:00:00Z",
+    "to": "2026-09-12T23:59:59Z",
+    "reason": "Data Innovation Summit. The project is on stage, so nothing changes unattended, however good the reason."
+  },
+  "owners": [],
+  "contacts": [
+    {
+      "email": "stan.dmitriev@aiven.io",
+      "why": "Last touched it: changed it 2 times in the event log"
+    }
+  ],
+  "ownership": "Nobody has been declared as an owner here, so the names below are observed rather than responsible: Marmot's asset_owners and teams tables are empty, and these are the people Aiven lists as contacts and the people the event log shows changing this service.",
+  "findings": [
+    {
+      "kind": "open-to-internet",
+      "severity": "danger",
+      "title": "Reachable from 0.0.0.0/0",
+      "detail": "The ip filter allows every address, so the only thing between this service and the internet is its password.",
+      "source": "aiven_service_get",
+      "capturedAt": "2026-09-15T08:20:00Z",
+      "docUrl": "https://aiven.io/docs/platform/howto/restrict-access",
+      "runbook": {
+        "forFinding": "open-to-internet",
+        "title": "Close the service to the open internet",
+        "docUrl": "https://aiven.io/docs/platform/howto/restrict-access",
+        "deviations": [
+          "pg-no-hba"
+        ],
+        "steps": [
+          "List what actually connects: the integrations in this catalog plus any application using a service credential.",
+          "Collect the egress ranges those clients come from. A guess here locks out production.",
+          "Replace the ip_filter with that list using aiven_service_update, leaving 0.0.0.0/0 out.",
+          "Keep your own access in the list, or you lock yourself out along with everyone else."
+        ],
+        "whileItRuns": "Established connections survive. New connections from anything outside the list are refused immediately, which is the whole point and also the risk.",
+        "takes": "Seconds to apply.",
+        "rollback": "Reversible: put the previous filter back with the same call.",
+        "verify": "Connect from an allowed address, then from one that is not. The second attempt must fail, or the filter did not take."
+      }
+    },
+    {
+      "kind": "single-node",
+      "severity": "caution",
+      "title": "One node, so a restart is an outage",
+      "detail": "There is nothing to fail over to. Every restart, plan change and platform update is downtime that has to be timed rather than absorbed.",
+      "source": "aiven_service_get",
+      "capturedAt": "2026-09-15T08:20:00Z",
+      "docUrl": "https://aiven.io/docs/products/postgresql/concepts/high-availability",
+      "runbook": {
+        "forFinding": "single-node",
+        "title": "Restart a service that has no second node",
+        "docUrl": "https://aiven.io/docs/products/postgresql/concepts/high-availability",
+        "deviations": [
+          "rebuild-not-edit"
+        ],
+        "steps": [
+          "Treat this as planned downtime and announce it, because that is what it is.",
+          "Check no platform maintenance is already in flight for the same service.",
+          "Prefer the existing maintenance window over a restart of your own.",
+          "Restart, then watch the dependents rather than the service: it comes back before they do."
+        ],
+        "whileItRuns": "A total outage for the length of the restart. Change data capture stops and resumes from its replication slot; consumers downstream fall behind rather than lose data.",
+        "takes": "A few minutes, most of it the service coming back up.",
+        "rollback": "None. A restart cannot be undone, only waited out.",
+        "verify": "Service state RUNNING, the CDC connector back to RUNNING, and consumer lag falling across two readings rather than one."
+      }
+    },
+    {
+      "kind": "weak-password-encryption",
+      "severity": "caution",
+      "title": "Passwords are stored as md5",
+      "detail": "scram-sha-256 is the stronger scheme and the one Postgres has defaulted to since version 14; md5 is deprecated upstream. Changing the setting is a one-line call, but existing hashes only convert when each password is reset, so the work is in the clients rather than the service.",
+      "source": "aiven_service_get",
+      "capturedAt": "2026-09-15T08:20:00Z",
+      "docUrl": "https://aiven.io/docs/tools/api",
+      "runbook": {
+        "forFinding": "weak-password-encryption",
+        "title": "Move Postgres password encryption from md5 to scram-sha-256",
+        "docUrl": "https://aiven.io/docs/tools/api",
+        "deviations": [
+          "pg-no-superuser",
+          "pg-no-hba"
+        ],
+        "steps": [
+          "Set password_encryption to scram-sha-256 with aiven_service_update. Existing md5 hashes keep working; the setting only decides how the next password is stored.",
+          "List the roles still holding an md5 hash: select usename, passwd like 'SCRAM-SHA-256%' as scram from pg_shadow.",
+          "Reset each password, which is what actually converts the hash. A role nobody resets stays on md5 indefinitely.",
+          "Update every client that holds the password in the same window, including service integrations."
+        ],
+        "whileItRuns": "Changing the setting alone interrupts nothing. Resetting a password does: every client still using the old one fails to authenticate until it is updated, and a forgotten integration is how that becomes an outage.",
+        "takes": "Seconds for the setting. The password resets take as long as finding every client that holds one.",
+        "rollback": "Reversible: set the parameter back and reset the passwords again, which has the same client impact in reverse.",
+        "verify": "pg_shadow shows every role on a SCRAM-SHA-256 hash, and each client reconnects."
+      }
+    },
+    {
+      "kind": "pending-maintenance",
+      "severity": "caution",
+      "title": "1 platform update queued, no deadline set yet",
+      "detail": "No deadline has been set, so this one waits for the maintenance window rather than forcing it. It still applies eventually, and doing it deliberately is cheaper than being surprised. Queued: PostgreSQL Anonymizer version 3.1.3 is available.",
+      "source": "aiven_service_get",
+      "capturedAt": "2026-09-15T08:20:00Z",
+      "docUrl": "https://aiven.io/docs/platform/concepts/maintenance-window",
+      "runbook": {
+        "forFinding": "pending-maintenance",
+        "title": "Apply platform maintenance before its deadline",
+        "docUrl": "https://aiven.io/docs/platform/concepts/maintenance-window",
+        "deviations": [
+          "auto-updates",
+          "rebuild-not-edit"
+        ],
+        "steps": [
+          "Read the deadlines from aiven_service_get: after them, Aiven applies the update whether or not it suits you.",
+          "Pick a window before the earliest deadline and inside the service maintenance window.",
+          "Apply the updates there, oldest deadline first."
+        ],
+        "whileItRuns": "Rolling on a multi-node service, downtime on a single node. Either way it is the same interruption you would get by leaving it to the deadline, but at a time you chose.",
+        "takes": "Minutes per update, longer for a version upgrade.",
+        "rollback": "A version upgrade is one way. Plan for going forward, not back.",
+        "verify": "The pending update list is empty and the service reports the new version."
+      }
+    },
+    {
+      "kind": "no-termination-protection",
+      "severity": "info",
+      "title": "Termination protection is off",
+      "detail": "Nothing stands between a deletion call and this service, which is a cheap gap to close.",
+      "source": "aiven_service_get",
+      "capturedAt": "2026-09-15T08:20:00Z",
+      "docUrl": "https://aiven.io/docs/tools/api",
+      "runbook": {
+        "forFinding": "no-termination-protection",
+        "title": "Turn on termination protection",
+        "steps": [
+          "Set termination protection with aiven_service_update."
+        ],
+        "whileItRuns": "Nothing. It is a configuration flag, with no restart.",
+        "takes": "Seconds.",
+        "rollback": "Reversible with the same call, which is exactly why it is worth having on.",
+        "verify": "Read the service back and confirm the flag is set."
+      }
+    }
+  ],
+  "readings": [],
+  "dependents": {
+    "datasets": 57,
+    "downstreamAssets": [],
+    "downstreamServices": [],
+    "credentialHolders": [
+      "marmot-catalog"
+    ],
+    "stacks": [
+      "Marmot"
+    ]
+  },
+  "plan": {
+    "current": {
+      "serviceType": "pg",
+      "plan": "hobbyist",
+      "cloud": "aws-eu-west-1",
+      "usdPerHour": 0.034,
+      "diskGb": 8
+    },
+    "options": [
+      {
+        "plan": "startup-4",
+        "usdPerHour": 0.151,
+        "diskGb": 80,
+        "extraUsdPerHour": 0.117,
+        "extraUsdPerMonth": 85.41,
+        "canAddDisk": true
+      }
+    ],
+    "downsize": {
+      "verdict": "already smallest",
+      "because": "hobbyist is the cheapest rung captured for this service type, so there is nothing below it to move to."
+    },
+    "note": "hobbyist cannot buy disk on its own, so more space means the next plan up and the restart that comes with it."
+  },
+  "lifecycle": {
+    "state": "RUNNING",
+    "stateReadAt": "2026-09-15T08:20:00Z",
+    "stateMeans": "Serving traffic. Normal, and the only state in which most changes are safe to attempt.",
+    "maintenanceWindow": "saturday at 06:54:35 UTC",
+    "updates": [
+      {
+        "description": "PostgreSQL Anonymizer version 3.1.3 is available.",
+        "startAt": "2026-09-14T08:35:00Z",
+        "impact": "A version upgrade on a single node is downtime for its whole duration, and it cannot be rolled back.",
+        "takes": "Ten minutes to an hour, depending on data size.",
+        "deadlineNote": "No deadline set yet, so the window is still yours to choose. That changes without notice."
+      }
+    ],
+    "note": "Impact and duration are authored per kind of update, since Aiven states what and when but not what it costs."
+  },
+  "descriptionReview": {
+    "author": "the catalog snapshot",
+    "at": "2026-09-15",
+    "state": "accepted",
+    "sources": [
+      "this catalog, authored when the project was walked"
+    ]
+  },
+  "deviations": [
+    {
+      "id": "pg-no-hba",
+      "serviceTypes": [
+        "pg"
+      ],
+      "kind": "not configurable",
+      "title": "There is no pg_hba.conf to edit",
+      "detail": "Host-based authentication is managed by the platform and not exposed. Network access is the service IP filter, and everything else is roles and grants inside the database. An agent reasoning from upstream Postgres will reach for the file first, and the file is not there.",
+      "docUrl": "https://aiven.io/docs/platform/howto/restrict-access",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "pg-no-superuser",
+      "serviceTypes": [
+        "pg"
+      ],
+      "kind": "differs from upstream",
+      "title": "avnadmin is not a superuser",
+      "detail": "The administrative account has most privileges but not superuser, so anything requiring it fails: ALTER SYSTEM, untrusted procedural languages, and a handful of extensions. Server settings change through the service configuration API instead, which applies them the supported way and survives the next node rebuild.",
+      "docUrl": "https://aiven.io/docs/tools/api",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "pg-extensions",
+      "serviceTypes": [
+        "pg"
+      ],
+      "kind": "not configurable",
+      "title": "Extensions come from a supported list, and some are not installed by CREATE EXTENSION",
+      "detail": "Only extensions Aiven packages are available, and several need enabling through service configuration rather than SQL. \"It is on PGXN\" is not a reason it can be installed here. Georg Traar named this as one of the deviations that is barely documented anywhere the customer can see.",
+      "docUrl": "https://aiven.io/docs/products/postgresql/reference/list-of-extensions",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "pg-connection-reserve",
+      "serviceTypes": [
+        "pg"
+      ],
+      "kind": "differs from upstream",
+      "title": "Not all of max_connections is yours",
+      "detail": "The platform reserves connections for its own monitoring, backup and maintenance users, so a service reporting 100 gives the application slightly fewer. Connection pooling is a managed feature rather than something installed on the node.",
+      "docUrl": "https://aiven.io/docs/products/postgresql/reference/pg-connection-limits",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "auto-updates",
+      "serviceTypes": [
+        "*"
+      ],
+      "kind": "managed automatically",
+      "title": "Minor versions and platform software update themselves",
+      "detail": "Security patches and minor version upgrades are applied in the maintenance window without being requested. A version changing between two readings of this catalog is expected behaviour rather than an incident, which is worth knowing before an agent opens one.",
+      "docUrl": "https://aiven.io/docs/platform/concepts/maintenance-window",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "platform-agents",
+      "serviceTypes": [
+        "*"
+      ],
+      "kind": "managed automatically",
+      "title": "Aiven software runs on the nodes alongside yours",
+      "detail": "Monitoring, backup and orchestration processes run on every service, hold their own database connections, and appear in statistics as sessions and queries nobody in your team wrote. Customers are not generally aware of this, so the unexplained connection is usually ours.",
+      "docUrl": "https://aiven.io/docs/platform/concepts/service-power-cycle",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "rebuild-not-edit",
+      "serviceTypes": [
+        "*"
+      ],
+      "kind": "differs from upstream",
+      "title": "Many changes replace the nodes rather than modify them",
+      "detail": "A plan change or a maintenance update generally builds new nodes and moves service to them, so node names change and anything pinned to a host or an IP breaks. This is why a plan change on a single-node service is downtime rather than a resize.",
+      "docUrl": "https://aiven.io/docs/platform/howto/scale-services",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "disk-without-plan",
+      "serviceTypes": [
+        "*"
+      ],
+      "kind": "differs from upstream",
+      "title": "Disk can sometimes grow without a plan change",
+      "detail": "On plans that support it, storage is added to the running service, which makes \"we are running out of disk\" a smaller problem here than the upstream instinct of provisioning a bigger machine. Whether this service is one of them is in the plan block.",
+      "docUrl": "https://aiven.io/docs/platform/concepts/dynamic-disk-sizing",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "backup-is-fork",
+      "serviceTypes": [
+        "*"
+      ],
+      "kind": "differs from upstream",
+      "title": "Restoring means forking to a new service",
+      "detail": "Backups are not restored in place. The supported path creates a new service at a point in time, which you then move traffic to — so a restore is a migration with a connection-string change, not an afternoon of pg_restore. Worth knowing before promising a rollback that assumes otherwise.",
+      "docUrl": "https://aiven.io/docs/platform/howto/console-fork-service",
+      "reviewed": "2026-09-15"
+    }
+  ],
+  "summary": "marmot-pg is PostgreSQL, currently RUNNING, standard in production. Marmot catalog store. It holds 57 catalogued datasets and 139 described columns. 3 of those datasets hold data an agent must not read. 19 show no sign of being used by anything this catalog can see, which is a question for their owner rather than a licence to remove them. Nothing downstream depends on it. 5 findings, worst: Reachable from 0.0.0.0/0 (danger). Unattended, an agent may read metadata, read metrics and apply pending maintenance. Forbidden: delete the service. A change freeze is in force: Data Innovation Summit. The project is on stage, so nothing changes unattended, however good the reason. Policy basis: derived from standard criticality in a production environment.",
+  "data": {
+    "datasets": 57,
+    "columns": 139,
+    "assets": [
+      {
+        "id": "marmot.assets",
+        "name": "assets",
+        "kind": "table",
+        "qualifiedName": "marmot-pg.public.assets",
+        "description": "Marmot registered data assets with schema JSON and search text.",
+        "tags": [
+          "marmot"
+        ],
+        "columns": [
+          {
+            "name": "id",
+            "type": "varchar",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Marmot's own asset id"
+          },
+          {
+            "name": "name",
+            "type": "varchar",
+            "nullable": false,
+            "note": "Asset name as displayed"
+          },
+          {
+            "name": "mrn",
+            "type": "varchar",
+            "nullable": false,
+            "note": "Marmot resource name, the identifier lineage_edges join on"
+          },
+          {
+            "name": "type",
+            "type": "varchar",
+            "nullable": false,
+            "note": "Asset kind, such as table or topic"
+          },
+          {
+            "name": "providers",
+            "type": "text[]",
+            "nullable": false,
+            "note": "Systems that reported this asset"
+          },
+          {
+            "name": "environments",
+            "type": "jsonb",
+            "nullable": false,
+            "note": "Where the asset exists, per environment"
+          },
+          {
+            "name": "description",
+            "type": "text",
+            "nullable": true,
+            "note": "Description shown in Marmot; null when nobody wrote one"
+          },
+          {
+            "name": "metadata",
+            "type": "jsonb",
+            "nullable": false,
+            "note": "Everything ingested that has no column of its own"
+          },
+          {
+            "name": "schema",
+            "type": "jsonb",
+            "nullable": false,
+            "note": "Captured column list, as JSON rather than rows"
+          },
+          {
+            "name": "sources",
+            "type": "jsonb",
+            "nullable": false,
+            "note": "Which ingestion produced this record"
+          },
+          {
+            "name": "tags",
+            "type": "text[]",
+            "nullable": false,
+            "note": "Free-form labels"
+          },
+          {
+            "name": "query",
+            "type": "text",
+            "nullable": true,
+            "note": "Flattened text the search index is built from"
+          },
+          {
+            "name": "is_stub",
+            "type": "boolean",
+            "nullable": false,
+            "note": "True for an asset only referenced by lineage, never ingested itself"
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz",
+            "nullable": false,
+            "note": "First registered"
+          },
+          {
+            "name": "updated_at",
+            "type": "timestamptz",
+            "nullable": false,
+            "note": "Last re-ingested"
+          }
+        ],
+        "deletion": {
+          "assetId": "marmot.assets",
+          "verdict": "unsafe",
+          "because": "Something is using it: 10 foreign keys point at it, so the drop fails on the constraint, a recorded statement names it. Deleting it breaks that, and the break is not reversible by re-creating an empty one.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Foreign keys pointing at it",
+              "found": "10 referencing tables: marmot-pg.public.agent_runs, marmot-pg.public.asset_owners, marmot-pg.public.asset_rule_memberships, marmot-pg.public.asset_schedules, marmot-pg.public.asset_subscriptions, marmot-pg.public.asset_terms, marmot-pg.public.data_product_memberships, marmot-pg.public.lineage_edges, marmot-pg.public.run_history",
+              "source": "pg_constraint"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "Named by at least one of the 84 recorded statements",
+              "source": "pg_stat_statements, all 84 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "marmot.lineage_edges",
+        "name": "lineage_edges",
+        "kind": "table",
+        "qualifiedName": "marmot-pg.public.lineage_edges",
+        "description": "Observed or declared lineage between Marmot resource names.",
+        "tags": [
+          "marmot"
+        ],
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Surrogate key"
+          },
+          {
+            "name": "source_mrn",
+            "type": "varchar",
+            "nullable": false,
+            "note": "Upstream asset, by MRN"
+          },
+          {
+            "name": "target_mrn",
+            "type": "varchar",
+            "nullable": false,
+            "note": "Downstream asset, by MRN"
+          },
+          {
+            "name": "event_id",
+            "type": "uuid",
+            "nullable": false,
+            "note": "The lineage event this edge was derived from"
+          },
+          {
+            "name": "job_mrn",
+            "type": "varchar",
+            "nullable": true,
+            "note": "Job that moved the data; null when only the endpoints are known"
+          },
+          {
+            "name": "type",
+            "type": "varchar",
+            "nullable": true,
+            "note": "Kind of edge"
+          },
+          {
+            "name": "origin",
+            "type": "varchar",
+            "nullable": false,
+            "note": "Whether the edge was observed from runtime or declared by hand"
+          },
+          {
+            "name": "observation_count",
+            "type": "integer",
+            "nullable": false,
+            "note": "Times the edge has been seen; a proxy for confidence"
+          },
+          {
+            "name": "last_seen_at",
+            "type": "timestamptz",
+            "nullable": false,
+            "note": "Most recent observation, so stale edges are visible"
+          }
+        ],
+        "deletion": {
+          "assetId": "marmot.lineage_edges",
+          "verdict": "unsafe",
+          "because": "Something is using it: a recorded statement names it. Deleting it breaks that, and the break is not reversible by re-creating an empty one.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "Named by at least one of the 84 recorded statements",
+              "source": "pg_stat_statements, all 84 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "marmot.data_products",
+        "name": "data_products",
+        "kind": "table",
+        "qualifiedName": "marmot-pg.public.data_products",
+        "description": "Marmot data product registry.",
+        "tags": [
+          "marmot"
+        ],
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Surrogate key"
+          },
+          {
+            "name": "name",
+            "type": "varchar",
+            "nullable": false,
+            "note": "Product name"
+          },
+          {
+            "name": "description",
+            "type": "text",
+            "nullable": true,
+            "note": "What the product offers and to whom"
+          },
+          {
+            "name": "metadata",
+            "type": "jsonb",
+            "nullable": false,
+            "note": "Ownership and any other free-form fields"
+          },
+          {
+            "name": "tags",
+            "type": "text[]",
+            "nullable": false,
+            "note": "Free-form labels"
+          },
+          {
+            "name": "created_by",
+            "type": "uuid",
+            "constraint": "FK",
+            "nullable": true,
+            "note": "Who registered the product; null once that user is deleted"
+          },
+          {
+            "name": "membership_count",
+            "type": "integer",
+            "nullable": false,
+            "note": "Assets in the product, denormalised for listing"
+          }
+        ],
+        "deletion": {
+          "assetId": "marmot.data_products",
+          "verdict": "unsafe",
+          "because": "Something is using it: 5 foreign keys point at it, so the drop fails on the constraint, a recorded statement names it. Deleting it breaks that, and the break is not reversible by re-creating an empty one.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Foreign keys pointing at it",
+              "found": "5 referencing tables: marmot-pg.public.data_product_memberships, marmot-pg.public.data_product_owners, marmot-pg.public.data_product_rule_targets, marmot-pg.public.data_product_rules, marmot-pg.public.product_images",
+              "source": "pg_constraint"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "Named by at least one of the 84 recorded statements",
+              "source": "pg_stat_statements, all 84 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "marmot.glossary_terms",
+        "name": "glossary_terms",
+        "kind": "table",
+        "qualifiedName": "marmot-pg.public.glossary_terms",
+        "description": "Business glossary used by Marmot.",
+        "tags": [
+          "marmot"
+        ],
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Surrogate key"
+          },
+          {
+            "name": "name",
+            "type": "varchar",
+            "nullable": false,
+            "note": "The term itself"
+          },
+          {
+            "name": "definition",
+            "type": "text",
+            "nullable": false,
+            "note": "Agreed meaning of the term"
+          },
+          {
+            "name": "parent_term_id",
+            "type": "uuid",
+            "constraint": "FK",
+            "nullable": true,
+            "note": "Broader term; null at the top of the hierarchy"
+          },
+          {
+            "name": "tags",
+            "type": "text[]",
+            "nullable": true,
+            "note": "Free-form labels"
+          }
+        ],
+        "deletion": {
+          "assetId": "marmot.glossary_terms",
+          "verdict": "unsafe",
+          "because": "Something is using it: 4 foreign keys point at it, so the drop fails on the constraint, a recorded statement names it. Deleting it breaks that, and the break is not reversible by re-creating an empty one.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Foreign keys pointing at it",
+              "found": "4 referencing tables: marmot-pg.public.asset_rule_terms, marmot-pg.public.asset_terms, marmot-pg.public.glossary_term_owners, marmot-pg.public.glossary_terms",
+              "source": "pg_constraint"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "Named by at least one of the 84 recorded statements",
+              "source": "pg_stat_statements, all 84 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "marmot.agent_runs",
+        "name": "agent_runs",
+        "kind": "table",
+        "qualifiedName": "marmot-pg.public.agent_runs",
+        "description": "Marmot catalog table agent_runs. 12 columns in the database; the snapshot keeps its key columns, which are what the data model is drawn from.",
+        "tags": [
+          "marmot"
+        ],
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Primary key."
+          },
+          {
+            "name": "agent_id",
+            "type": "varchar(255)",
+            "constraint": "FK",
+            "nullable": false,
+            "note": "references assets.id."
+          }
+        ],
+        "deletion": {
+          "assetId": "marmot.agent_runs",
+          "verdict": "unsafe",
+          "because": "Something is using it: 1 foreign key points at it, so the drop fails on the constraint. Deleting it breaks that, and the break is not reversible by re-creating an empty one.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Foreign keys pointing at it",
+              "found": "1 referencing table: marmot-pg.public.agent_tool_calls",
+              "source": "pg_constraint"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "None of the 84 statements recorded on this service name it",
+              "source": "pg_stat_statements, all 84 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "marmot.agent_tool_calls",
+        "name": "agent_tool_calls",
+        "kind": "table",
+        "qualifiedName": "marmot-pg.public.agent_tool_calls",
+        "description": "Marmot catalog table agent_tool_calls. 7 columns in the database; the snapshot keeps its key columns, which are what the data model is drawn from.",
+        "tags": [
+          "marmot"
+        ],
+        "columns": [
+          {
+            "name": "run_pk",
+            "type": "uuid",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Part of the composite primary key, references agent_runs.id."
+          },
+          {
+            "name": "ordinal",
+            "type": "integer",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Part of the composite primary key."
+          }
+        ],
+        "deletion": {
+          "assetId": "marmot.agent_tool_calls",
+          "verdict": "no sign of use",
+          "because": "Nothing catalogued reads it, nothing references it, and none of the statements captured on this service name it. That is an argument for asking whoever owns it, not for deleting it: no last-write time exists anywhere in this snapshot, and a consumer connecting with a plain connection string leaves no trace here at all.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "None of the 84 statements recorded on this service name it",
+              "source": "pg_stat_statements, all 84 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "marmot.aggregated_metrics",
+        "name": "aggregated_metrics",
+        "kind": "table",
+        "qualifiedName": "marmot-pg.public.aggregated_metrics",
+        "description": "Marmot catalog table aggregated_metrics. No keys and no column list in this snapshot: nothing references it and it references nothing.",
+        "tags": [
+          "marmot"
+        ],
+        "columns": [],
+        "deletion": {
+          "assetId": "marmot.aggregated_metrics",
+          "verdict": "no sign of use",
+          "because": "Nothing catalogued reads it, nothing references it, and none of the statements captured on this service name it. That is an argument for asking whoever owns it, not for deleting it: no last-write time exists anywhere in this snapshot, and a consumer connecting with a plain connection string leaves no trace here at all.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "None of the 84 statements recorded on this service name it",
+              "source": "pg_stat_statements, all 84 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "marmot.api_keys",
+        "name": "api_keys",
+        "kind": "table",
+        "qualifiedName": "marmot-pg.public.api_keys",
+        "description": "Marmot catalog table api_keys. 7 columns in the database; the snapshot keeps its key columns, which are what the data model is drawn from.",
+        "tags": [
+          "marmot",
+          "credentials",
+          "agent-blocked"
+        ],
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Primary key."
+          },
+          {
+            "name": "user_id",
+            "type": "uuid",
+            "constraint": "FK",
+            "nullable": false,
+            "note": "references users.id."
+          },
+          {
+            "name": "name",
+            "type": "varchar(255)",
+            "constraint": "UQ",
+            "nullable": false,
+            "note": "Unique."
+          }
+        ],
+        "deletion": {
+          "assetId": "marmot.api_keys",
+          "verdict": "unsafe",
+          "because": "Something is using it: a recorded statement names it. Deleting it breaks that, and the break is not reversible by re-creating an empty one.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "Named by at least one of the 84 recorded statements",
+              "source": "pg_stat_statements, all 84 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "marmot.asset_owners",
+        "name": "asset_owners",
+        "kind": "table",
+        "qualifiedName": "marmot-pg.public.asset_owners",
+        "description": "Marmot catalog table asset_owners. 5 columns in the database; the snapshot keeps its key columns, which are what the data model is drawn from.",
+        "tags": [
+          "marmot"
+        ],
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Primary key."
+          },
+          {
+            "name": "asset_id",
+            "type": "varchar(255)",
+            "constraint": "FK",
+            "nullable": false,
+            "note": "references assets.id."
+          },
+          {
+            "name": "user_id",
+            "type": "uuid",
+            "constraint": "FK",
+            "nullable": true,
+            "note": "references users.id."
+          },
+          {
+            "name": "team_id",
+            "type": "uuid",
+            "constraint": "FK",
+            "nullable": true,
+            "note": "references teams.id."
+          }
+        ],
+        "deletion": {
+          "assetId": "marmot.asset_owners",
+          "verdict": "unsafe",
+          "because": "Something is using it: a recorded statement names it. Deleting it breaks that, and the break is not reversible by re-creating an empty one.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "Named by at least one of the 84 recorded statements",
+              "source": "pg_stat_statements, all 84 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "marmot.asset_rule_memberships",
+        "name": "asset_rule_memberships",
+        "kind": "table",
+        "qualifiedName": "marmot-pg.public.asset_rule_memberships",
+        "description": "Marmot catalog table asset_rule_memberships. 3 columns in the database; the snapshot keeps its key columns, which are what the data model is drawn from.",
+        "tags": [
+          "marmot"
+        ],
+        "columns": [
+          {
+            "name": "asset_rule_id",
+            "type": "uuid",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Part of the composite primary key, references asset_rules.id."
+          },
+          {
+            "name": "asset_id",
+            "type": "varchar(255)",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Part of the composite primary key, references assets.id."
+          }
+        ],
+        "deletion": {
+          "assetId": "marmot.asset_rule_memberships",
+          "verdict": "unsafe",
+          "because": "Something is using it: a recorded statement names it. Deleting it breaks that, and the break is not reversible by re-creating an empty one.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "Named by at least one of the 84 recorded statements",
+              "source": "pg_stat_statements, all 84 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "marmot.asset_rule_targets",
+        "name": "asset_rule_targets",
+        "kind": "table",
+        "qualifiedName": "marmot-pg.public.asset_rule_targets",
+        "description": "Marmot catalog table asset_rule_targets. 3 columns in the database; the snapshot keeps its key columns, which are what the data model is drawn from.",
+        "tags": [
+          "marmot"
+        ],
+        "columns": [
+          {
+            "name": "rule_id",
+            "type": "uuid",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Part of the composite primary key, references asset_rules.id."
+          },
+          {
+            "name": "target_type",
+            "type": "varchar(50)",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Part of the composite primary key."
+          },
+          {
+            "name": "target_value",
+            "type": "text",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Part of the composite primary key."
+          }
+        ],
+        "deletion": {
+          "assetId": "marmot.asset_rule_targets",
+          "verdict": "no sign of use",
+          "because": "Nothing catalogued reads it, nothing references it, and none of the statements captured on this service name it. That is an argument for asking whoever owns it, not for deleting it: no last-write time exists anywhere in this snapshot, and a consumer connecting with a plain connection string leaves no trace here at all.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "None of the 84 statements recorded on this service name it",
+              "source": "pg_stat_statements, all 84 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "marmot.asset_rule_terms",
+        "name": "asset_rule_terms",
+        "kind": "table",
+        "qualifiedName": "marmot-pg.public.asset_rule_terms",
+        "description": "Marmot catalog table asset_rule_terms. 2 columns in the database; the snapshot keeps its key columns, which are what the data model is drawn from.",
+        "tags": [
+          "marmot"
+        ],
+        "columns": [
+          {
+            "name": "asset_rule_id",
+            "type": "uuid",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Part of the composite primary key, references asset_rules.id."
+          },
+          {
+            "name": "glossary_term_id",
+            "type": "uuid",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Part of the composite primary key, references glossary_terms.id."
+          }
+        ],
+        "deletion": {
+          "assetId": "marmot.asset_rule_terms",
+          "verdict": "no sign of use",
+          "because": "Nothing catalogued reads it, nothing references it, and none of the statements captured on this service name it. That is an argument for asking whoever owns it, not for deleting it: no last-write time exists anywhere in this snapshot, and a consumer connecting with a plain connection string leaves no trace here at all.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "None of the 84 statements recorded on this service name it",
+              "source": "pg_stat_statements, all 84 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "marmot.asset_rules",
+        "name": "asset_rules",
+        "kind": "table",
+        "qualifiedName": "marmot-pg.public.asset_rules",
+        "description": "Marmot catalog table asset_rules. 19 columns in the database; the snapshot keeps its key columns, which are what the data model is drawn from.",
+        "tags": [
+          "marmot"
+        ],
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Primary key."
+          },
+          {
+            "name": "name",
+            "type": "varchar(255)",
+            "constraint": "UQ",
+            "nullable": false,
+            "note": "Unique."
+          },
+          {
+            "name": "created_by",
+            "type": "uuid",
+            "constraint": "FK",
+            "nullable": true,
+            "note": "references users.id."
+          }
+        ],
+        "deletion": {
+          "assetId": "marmot.asset_rules",
+          "verdict": "unsafe",
+          "because": "Something is using it: 3 foreign keys point at it, so the drop fails on the constraint, a recorded statement names it. Deleting it breaks that, and the break is not reversible by re-creating an empty one.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Foreign keys pointing at it",
+              "found": "3 referencing tables: marmot-pg.public.asset_rule_memberships, marmot-pg.public.asset_rule_targets, marmot-pg.public.asset_rule_terms",
+              "source": "pg_constraint"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "Named by at least one of the 84 recorded statements",
+              "source": "pg_stat_statements, all 84 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "marmot.asset_schedules",
+        "name": "asset_schedules",
+        "kind": "table",
+        "qualifiedName": "marmot-pg.public.asset_schedules",
+        "description": "Marmot catalog table asset_schedules. 4 columns in the database; the snapshot keeps its key columns, which are what the data model is drawn from.",
+        "tags": [
+          "marmot"
+        ],
+        "columns": [
+          {
+            "name": "asset_id",
+            "type": "varchar(255)",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Part of the composite primary key, references assets.id."
+          },
+          {
+            "name": "schedule_id",
+            "type": "uuid",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Part of the composite primary key, references ingestion_schedules.id."
+          }
+        ],
+        "deletion": {
+          "assetId": "marmot.asset_schedules",
+          "verdict": "no sign of use",
+          "because": "Nothing catalogued reads it, nothing references it, and none of the statements captured on this service name it. That is an argument for asking whoever owns it, not for deleting it: no last-write time exists anywhere in this snapshot, and a consumer connecting with a plain connection string leaves no trace here at all.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "None of the 84 statements recorded on this service name it",
+              "source": "pg_stat_statements, all 84 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "marmot.asset_statistics",
+        "name": "asset_statistics",
+        "kind": "table",
+        "qualifiedName": "marmot-pg.public.asset_statistics",
+        "description": "Marmot catalog table asset_statistics. No keys and no column list in this snapshot: nothing references it and it references nothing.",
+        "tags": [
+          "marmot"
+        ],
+        "columns": [],
+        "deletion": {
+          "assetId": "marmot.asset_statistics",
+          "verdict": "unsafe",
+          "because": "Something is using it: a recorded statement names it. Deleting it breaks that, and the break is not reversible by re-creating an empty one.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "Named by at least one of the 84 recorded statements",
+              "source": "pg_stat_statements, all 84 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "marmot.asset_subscriptions",
+        "name": "asset_subscriptions",
+        "kind": "table",
+        "qualifiedName": "marmot-pg.public.asset_subscriptions",
+        "description": "Marmot catalog table asset_subscriptions. 6 columns in the database; the snapshot keeps its key columns, which are what the data model is drawn from.",
+        "tags": [
+          "marmot"
+        ],
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Primary key."
+          },
+          {
+            "name": "asset_id",
+            "type": "varchar(255)",
+            "constraint": "FK",
+            "nullable": false,
+            "note": "references assets.id."
+          },
+          {
+            "name": "user_id",
+            "type": "uuid",
+            "constraint": "FK",
+            "nullable": false,
+            "note": "references users.id."
+          }
+        ],
+        "deletion": {
+          "assetId": "marmot.asset_subscriptions",
+          "verdict": "no sign of use",
+          "because": "Nothing catalogued reads it, nothing references it, and none of the statements captured on this service name it. That is an argument for asking whoever owns it, not for deleting it: no last-write time exists anywhere in this snapshot, and a consumer connecting with a plain connection string leaves no trace here at all.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "None of the 84 statements recorded on this service name it",
+              "source": "pg_stat_statements, all 84 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "marmot.asset_tags",
+        "name": "asset_tags",
+        "kind": "table",
+        "qualifiedName": "marmot-pg.public.asset_tags",
+        "description": "Marmot catalog table asset_tags. No keys and no column list in this snapshot: nothing references it and it references nothing.",
+        "tags": [
+          "marmot"
+        ],
+        "columns": [],
+        "deletion": {
+          "assetId": "marmot.asset_tags",
+          "verdict": "no sign of use",
+          "because": "Nothing catalogued reads it, nothing references it, and none of the statements captured on this service name it. That is an argument for asking whoever owns it, not for deleting it: no last-write time exists anywhere in this snapshot, and a consumer connecting with a plain connection string leaves no trace here at all.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "None of the 84 statements recorded on this service name it",
+              "source": "pg_stat_statements, all 84 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "marmot.asset_terms",
+        "name": "asset_terms",
+        "kind": "table",
+        "qualifiedName": "marmot-pg.public.asset_terms",
+        "description": "Marmot catalog table asset_terms. 5 columns in the database; the snapshot keeps its key columns, which are what the data model is drawn from.",
+        "tags": [
+          "marmot"
+        ],
+        "columns": [
+          {
+            "name": "asset_id",
+            "type": "varchar(255)",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Part of the composite primary key, references assets.id."
+          },
+          {
+            "name": "glossary_term_id",
+            "type": "uuid",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Part of the composite primary key, references glossary_terms.id."
+          },
+          {
+            "name": "created_by",
+            "type": "uuid",
+            "constraint": "FK",
+            "nullable": true,
+            "note": "references users.id."
+          }
+        ],
+        "deletion": {
+          "assetId": "marmot.asset_terms",
+          "verdict": "unsafe",
+          "because": "Something is using it: a recorded statement names it. Deleting it breaks that, and the break is not reversible by re-creating an empty one.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "Named by at least one of the 84 recorded statements",
+              "source": "pg_stat_statements, all 84 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "marmot.data_product_memberships",
+        "name": "data_product_memberships",
+        "kind": "table",
+        "qualifiedName": "marmot-pg.public.data_product_memberships",
+        "description": "Marmot catalog table data_product_memberships. 5 columns in the database; the snapshot keeps its key columns, which are what the data model is drawn from.",
+        "tags": [
+          "marmot"
+        ],
+        "columns": [
+          {
+            "name": "data_product_id",
+            "type": "uuid",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Part of the composite primary key, references data_products.id."
+          },
+          {
+            "name": "asset_id",
+            "type": "varchar(255)",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Part of the composite primary key, references assets.id."
+          },
+          {
+            "name": "rule_id",
+            "type": "uuid",
+            "constraint": "FK",
+            "nullable": true,
+            "note": "references data_product_rules.id."
+          }
+        ],
+        "deletion": {
+          "assetId": "marmot.data_product_memberships",
+          "verdict": "no sign of use",
+          "because": "Nothing catalogued reads it, nothing references it, and none of the statements captured on this service name it. That is an argument for asking whoever owns it, not for deleting it: no last-write time exists anywhere in this snapshot, and a consumer connecting with a plain connection string leaves no trace here at all.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "None of the 84 statements recorded on this service name it",
+              "source": "pg_stat_statements, all 84 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "marmot.data_product_owners",
+        "name": "data_product_owners",
+        "kind": "table",
+        "qualifiedName": "marmot-pg.public.data_product_owners",
+        "description": "Marmot catalog table data_product_owners. 5 columns in the database; the snapshot keeps its key columns, which are what the data model is drawn from.",
+        "tags": [
+          "marmot"
+        ],
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Primary key."
+          },
+          {
+            "name": "data_product_id",
+            "type": "uuid",
+            "constraint": "FK",
+            "nullable": false,
+            "note": "references data_products.id."
+          },
+          {
+            "name": "user_id",
+            "type": "uuid",
+            "constraint": "FK",
+            "nullable": true,
+            "note": "references users.id."
+          },
+          {
+            "name": "team_id",
+            "type": "uuid",
+            "constraint": "FK",
+            "nullable": true,
+            "note": "references teams.id."
+          }
+        ],
+        "deletion": {
+          "assetId": "marmot.data_product_owners",
+          "verdict": "unsafe",
+          "because": "Something is using it: a recorded statement names it. Deleting it breaks that, and the break is not reversible by re-creating an empty one.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "Named by at least one of the 84 recorded statements",
+              "source": "pg_stat_statements, all 84 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "marmot.data_product_rule_targets",
+        "name": "data_product_rule_targets",
+        "kind": "table",
+        "qualifiedName": "marmot-pg.public.data_product_rule_targets",
+        "description": "Marmot catalog table data_product_rule_targets. 4 columns in the database; the snapshot keeps its key columns, which are what the data model is drawn from.",
+        "tags": [
+          "marmot"
+        ],
+        "columns": [
+          {
+            "name": "rule_id",
+            "type": "uuid",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Part of the composite primary key, references data_product_rules.id."
+          },
+          {
+            "name": "data_product_id",
+            "type": "uuid",
+            "constraint": "FK",
+            "nullable": false,
+            "note": "references data_products.id."
+          },
+          {
+            "name": "target_type",
+            "type": "varchar(50)",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Part of the composite primary key."
+          },
+          {
+            "name": "target_value",
+            "type": "text",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Part of the composite primary key."
+          }
+        ],
+        "deletion": {
+          "assetId": "marmot.data_product_rule_targets",
+          "verdict": "no sign of use",
+          "because": "Nothing catalogued reads it, nothing references it, and none of the statements captured on this service name it. That is an argument for asking whoever owns it, not for deleting it: no last-write time exists anywhere in this snapshot, and a consumer connecting with a plain connection string leaves no trace here at all.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "None of the 84 statements recorded on this service name it",
+              "source": "pg_stat_statements, all 84 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "marmot.data_product_rules",
+        "name": "data_product_rules",
+        "kind": "table",
+        "qualifiedName": "marmot-pg.public.data_product_rules",
+        "description": "Marmot catalog table data_product_rules. 13 columns in the database; the snapshot keeps its key columns, which are what the data model is drawn from.",
+        "tags": [
+          "marmot"
+        ],
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Primary key."
+          },
+          {
+            "name": "data_product_id",
+            "type": "uuid",
+            "constraint": "FK",
+            "nullable": false,
+            "note": "references data_products.id."
+          },
+          {
+            "name": "name",
+            "type": "varchar(255)",
+            "nullable": false,
+            "note": "The name shown in Marmot."
+          }
+        ],
+        "deletion": {
+          "assetId": "marmot.data_product_rules",
+          "verdict": "unsafe",
+          "because": "Something is using it: 2 foreign keys point at it, so the drop fails on the constraint. Deleting it breaks that, and the break is not reversible by re-creating an empty one.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Foreign keys pointing at it",
+              "found": "2 referencing tables: marmot-pg.public.data_product_memberships, marmot-pg.public.data_product_rule_targets",
+              "source": "pg_constraint"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "None of the 84 statements recorded on this service name it",
+              "source": "pg_stat_statements, all 84 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "marmot.doc_images",
+        "name": "doc_images",
+        "kind": "table",
+        "qualifiedName": "marmot-pg.public.doc_images",
+        "description": "Marmot catalog table doc_images. 7 columns in the database; the snapshot keeps its key columns, which are what the data model is drawn from.",
+        "tags": [
+          "marmot"
+        ],
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Primary key."
+          },
+          {
+            "name": "page_id",
+            "type": "uuid",
+            "constraint": "FK",
+            "nullable": false,
+            "note": "references doc_pages.id."
+          }
+        ],
+        "deletion": {
+          "assetId": "marmot.doc_images",
+          "verdict": "unsafe",
+          "because": "Something is using it: a recorded statement names it. Deleting it breaks that, and the break is not reversible by re-creating an empty one.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "Named by at least one of the 84 recorded statements",
+              "source": "pg_stat_statements, all 84 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "marmot.doc_pages",
+        "name": "doc_pages",
+        "kind": "table",
+        "qualifiedName": "marmot-pg.public.doc_pages",
+        "description": "Marmot catalog table doc_pages. 12 columns in the database; the snapshot keeps its key columns, which are what the data model is drawn from.",
+        "tags": [
+          "marmot"
+        ],
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Primary key."
+          },
+          {
+            "name": "parent_id",
+            "type": "uuid",
+            "constraint": "FK",
+            "nullable": true,
+            "note": "references doc_pages.id."
+          },
+          {
+            "name": "title",
+            "type": "varchar(255)",
+            "nullable": false,
+            "note": "The title shown in Marmot."
+          },
+          {
+            "name": "created_by",
+            "type": "uuid",
+            "constraint": "FK",
+            "nullable": true,
+            "note": "references users.id."
+          }
+        ],
+        "deletion": {
+          "assetId": "marmot.doc_pages",
+          "verdict": "unsafe",
+          "because": "Something is using it: 2 foreign keys point at it, so the drop fails on the constraint, a recorded statement names it. Deleting it breaks that, and the break is not reversible by re-creating an empty one.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Foreign keys pointing at it",
+              "found": "2 referencing tables: marmot-pg.public.doc_images, marmot-pg.public.doc_pages",
+              "source": "pg_constraint"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "Named by at least one of the 84 recorded statements",
+              "source": "pg_stat_statements, all 84 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "marmot.documentation",
+        "name": "documentation",
+        "kind": "table",
+        "qualifiedName": "marmot-pg.public.documentation",
+        "description": "Marmot catalog table documentation. No keys and no column list in this snapshot: nothing references it and it references nothing.",
+        "tags": [
+          "marmot"
+        ],
+        "columns": [],
+        "deletion": {
+          "assetId": "marmot.documentation",
+          "verdict": "no sign of use",
+          "because": "Nothing catalogued reads it, nothing references it, and none of the statements captured on this service name it. That is an argument for asking whoever owns it, not for deleting it: no last-write time exists anywhere in this snapshot, and a consumer connecting with a plain connection string leaves no trace here at all.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "None of the 84 statements recorded on this service name it",
+              "source": "pg_stat_statements, all 84 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "marmot.global_documentation",
+        "name": "global_documentation",
+        "kind": "table",
+        "qualifiedName": "marmot-pg.public.global_documentation",
+        "description": "Marmot catalog table global_documentation. No keys and no column list in this snapshot: nothing references it and it references nothing.",
+        "tags": [
+          "marmot"
+        ],
+        "columns": [],
+        "deletion": {
+          "assetId": "marmot.global_documentation",
+          "verdict": "no sign of use",
+          "because": "Nothing catalogued reads it, nothing references it, and none of the statements captured on this service name it. That is an argument for asking whoever owns it, not for deleting it: no last-write time exists anywhere in this snapshot, and a consumer connecting with a plain connection string leaves no trace here at all.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "None of the 84 statements recorded on this service name it",
+              "source": "pg_stat_statements, all 84 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "marmot.glossary_term_owners",
+        "name": "glossary_term_owners",
+        "kind": "table",
+        "qualifiedName": "marmot-pg.public.glossary_term_owners",
+        "description": "Marmot catalog table glossary_term_owners. 5 columns in the database; the snapshot keeps its key columns, which are what the data model is drawn from.",
+        "tags": [
+          "marmot"
+        ],
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Primary key."
+          },
+          {
+            "name": "glossary_term_id",
+            "type": "uuid",
+            "constraint": "FK",
+            "nullable": false,
+            "note": "references glossary_terms.id."
+          },
+          {
+            "name": "user_id",
+            "type": "uuid",
+            "constraint": "FK",
+            "nullable": true,
+            "note": "references users.id."
+          },
+          {
+            "name": "team_id",
+            "type": "uuid",
+            "constraint": "FK",
+            "nullable": true,
+            "note": "references teams.id."
+          }
+        ],
+        "deletion": {
+          "assetId": "marmot.glossary_term_owners",
+          "verdict": "no sign of use",
+          "because": "Nothing catalogued reads it, nothing references it, and none of the statements captured on this service name it. That is an argument for asking whoever owns it, not for deleting it: no last-write time exists anywhere in this snapshot, and a consumer connecting with a plain connection string leaves no trace here at all.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "None of the 84 statements recorded on this service name it",
+              "source": "pg_stat_statements, all 84 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "marmot.ingestion_job_runs",
+        "name": "ingestion_job_runs",
+        "kind": "table",
+        "qualifiedName": "marmot-pg.public.ingestion_job_runs",
+        "description": "Marmot catalog table ingestion_job_runs. 20 columns in the database; the snapshot keeps its key columns, which are what the data model is drawn from.",
+        "tags": [
+          "marmot"
+        ],
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Primary key."
+          },
+          {
+            "name": "schedule_id",
+            "type": "uuid",
+            "constraint": "FK",
+            "nullable": true,
+            "note": "references ingestion_schedules.id."
+          },
+          {
+            "name": "plugin_run_id",
+            "type": "uuid",
+            "constraint": "FK",
+            "nullable": true,
+            "note": "references runs.id."
+          }
+        ],
+        "deletion": {
+          "assetId": "marmot.ingestion_job_runs",
+          "verdict": "unsafe",
+          "because": "Something is using it: a recorded statement names it. Deleting it breaks that, and the break is not reversible by re-creating an empty one.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "Named by at least one of the 84 recorded statements",
+              "source": "pg_stat_statements, all 84 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "marmot.ingestion_schedules",
+        "name": "ingestion_schedules",
+        "kind": "table",
+        "qualifiedName": "marmot-pg.public.ingestion_schedules",
+        "description": "Marmot catalog table ingestion_schedules. 12 columns in the database; the snapshot keeps its key columns, which are what the data model is drawn from.",
+        "tags": [
+          "marmot"
+        ],
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Primary key."
+          },
+          {
+            "name": "name",
+            "type": "varchar(255)",
+            "constraint": "UQ",
+            "nullable": false,
+            "note": "Unique."
+          }
+        ],
+        "deletion": {
+          "assetId": "marmot.ingestion_schedules",
+          "verdict": "unsafe",
+          "because": "Something is using it: 2 foreign keys point at it, so the drop fails on the constraint, a recorded statement names it. Deleting it breaks that, and the break is not reversible by re-creating an empty one.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Foreign keys pointing at it",
+              "found": "2 referencing tables: marmot-pg.public.asset_schedules, marmot-pg.public.ingestion_job_runs",
+              "source": "pg_constraint"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "Named by at least one of the 84 recorded statements",
+              "source": "pg_stat_statements, all 84 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "marmot.lineage_events",
+        "name": "lineage_events",
+        "kind": "table",
+        "qualifiedName": "marmot-pg.public.lineage_events",
+        "description": "Marmot catalog table lineage_events. 4 columns in the database; the snapshot keeps its key columns, which are what the data model is drawn from.",
+        "tags": [
+          "marmot"
+        ],
+        "columns": [
+          {
+            "name": "event_id",
+            "type": "uuid",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Primary key."
+          }
+        ],
+        "deletion": {
+          "assetId": "marmot.lineage_events",
+          "verdict": "unsafe",
+          "because": "Something is using it: 1 foreign key points at it, so the drop fails on the constraint. Deleting it breaks that, and the break is not reversible by re-creating an empty one.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Foreign keys pointing at it",
+              "found": "1 referencing table: marmot-pg.public.lineage_edges",
+              "source": "pg_constraint"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "None of the 84 statements recorded on this service name it",
+              "source": "pg_stat_statements, all 84 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "marmot.lookup_counters",
+        "name": "lookup_counters",
+        "kind": "table",
+        "qualifiedName": "marmot-pg.public.lookup_counters",
+        "description": "Marmot catalog table lookup_counters. No keys and no column list in this snapshot: nothing references it and it references nothing.",
+        "tags": [
+          "marmot"
+        ],
+        "columns": [],
+        "deletion": {
+          "assetId": "marmot.lookup_counters",
+          "verdict": "unsafe",
+          "because": "Something is using it: a recorded statement names it. Deleting it breaks that, and the break is not reversible by re-creating an empty one.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "Named by at least one of the 84 recorded statements",
+              "source": "pg_stat_statements, all 84 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "marmot.metrics_timeseries",
+        "name": "metrics_timeseries",
+        "kind": "table",
+        "qualifiedName": "marmot-pg.public.metrics_timeseries",
+        "description": "Marmot catalog table metrics_timeseries. No keys and no column list in this snapshot: nothing references it and it references nothing.",
+        "tags": [
+          "marmot"
+        ],
+        "columns": [],
+        "deletion": {
+          "assetId": "marmot.metrics_timeseries",
+          "verdict": "unsafe",
+          "because": "Something is using it: a recorded statement names it. Deleting it breaks that, and the break is not reversible by re-creating an empty one.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "Named by at least one of the 84 recorded statements",
+              "source": "pg_stat_statements, all 84 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "marmot.notifications",
+        "name": "notifications",
+        "kind": "table",
+        "qualifiedName": "marmot-pg.public.notifications",
+        "description": "Marmot catalog table notifications. 11 columns in the database; the snapshot keeps its key columns, which are what the data model is drawn from.",
+        "tags": [
+          "marmot"
+        ],
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Primary key."
+          },
+          {
+            "name": "user_id",
+            "type": "uuid",
+            "constraint": "FK",
+            "nullable": false,
+            "note": "references users.id."
+          },
+          {
+            "name": "title",
+            "type": "varchar(255)",
+            "nullable": false,
+            "note": "The title shown in Marmot."
+          }
+        ],
+        "deletion": {
+          "assetId": "marmot.notifications",
+          "verdict": "unsafe",
+          "because": "Something is using it: a recorded statement names it. Deleting it breaks that, and the break is not reversible by re-creating an empty one.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "Named by at least one of the 84 recorded statements",
+              "source": "pg_stat_statements, all 84 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "marmot.permissions",
+        "name": "permissions",
+        "kind": "table",
+        "qualifiedName": "marmot-pg.public.permissions",
+        "description": "Marmot catalog table permissions. 6 columns in the database; the snapshot keeps its key columns, which are what the data model is drawn from.",
+        "tags": [
+          "marmot"
+        ],
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Primary key."
+          },
+          {
+            "name": "name",
+            "type": "varchar(255)",
+            "constraint": "UQ",
+            "nullable": false,
+            "note": "Unique."
+          }
+        ],
+        "deletion": {
+          "assetId": "marmot.permissions",
+          "verdict": "unsafe",
+          "because": "Something is using it: 1 foreign key points at it, so the drop fails on the constraint, a recorded statement names it. Deleting it breaks that, and the break is not reversible by re-creating an empty one.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Foreign keys pointing at it",
+              "found": "1 referencing table: marmot-pg.public.role_permissions",
+              "source": "pg_constraint"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "Named by at least one of the 84 recorded statements",
+              "source": "pg_stat_statements, all 84 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "marmot.product_images",
+        "name": "product_images",
+        "kind": "table",
+        "qualifiedName": "marmot-pg.public.product_images",
+        "description": "Marmot catalog table product_images. 9 columns in the database; the snapshot keeps its key columns, which are what the data model is drawn from.",
+        "tags": [
+          "marmot"
+        ],
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Primary key."
+          },
+          {
+            "name": "data_product_id",
+            "type": "uuid",
+            "constraint": "FK",
+            "nullable": false,
+            "note": "references data_products.id."
+          },
+          {
+            "name": "created_by",
+            "type": "uuid",
+            "constraint": "FK",
+            "nullable": true,
+            "note": "references users.id."
+          }
+        ],
+        "deletion": {
+          "assetId": "marmot.product_images",
+          "verdict": "no sign of use",
+          "because": "Nothing catalogued reads it, nothing references it, and none of the statements captured on this service name it. That is an argument for asking whoever owns it, not for deleting it: no last-write time exists anywhere in this snapshot, and a consumer connecting with a plain connection string leaves no trace here at all.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "None of the 84 statements recorded on this service name it",
+              "source": "pg_stat_statements, all 84 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "marmot.raw_metrics",
+        "name": "raw_metrics",
+        "kind": "table",
+        "qualifiedName": "marmot-pg.public.raw_metrics",
+        "description": "Marmot catalog table raw_metrics. No keys and no column list in this snapshot: nothing references it and it references nothing.",
+        "tags": [
+          "marmot"
+        ],
+        "columns": [],
+        "deletion": {
+          "assetId": "marmot.raw_metrics",
+          "verdict": "no sign of use",
+          "because": "Nothing catalogued reads it, nothing references it, and none of the statements captured on this service name it. That is an argument for asking whoever owns it, not for deleting it: no last-write time exists anywhere in this snapshot, and a consumer connecting with a plain connection string leaves no trace here at all.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "None of the 84 statements recorded on this service name it",
+              "source": "pg_stat_statements, all 84 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "marmot.role_permissions",
+        "name": "role_permissions",
+        "kind": "table",
+        "qualifiedName": "marmot-pg.public.role_permissions",
+        "description": "Marmot catalog table role_permissions. 3 columns in the database; the snapshot keeps its key columns, which are what the data model is drawn from.",
+        "tags": [
+          "marmot"
+        ],
+        "columns": [
+          {
+            "name": "role_id",
+            "type": "uuid",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Part of the composite primary key, references roles.id."
+          },
+          {
+            "name": "permission_id",
+            "type": "uuid",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Part of the composite primary key, references permissions.id."
+          }
+        ],
+        "deletion": {
+          "assetId": "marmot.role_permissions",
+          "verdict": "unsafe",
+          "because": "Something is using it: a recorded statement names it. Deleting it breaks that, and the break is not reversible by re-creating an empty one.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "Named by at least one of the 84 recorded statements",
+              "source": "pg_stat_statements, all 84 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "marmot.roles",
+        "name": "roles",
+        "kind": "table",
+        "qualifiedName": "marmot-pg.public.roles",
+        "description": "Marmot catalog table roles. 7 columns in the database; the snapshot keeps its key columns, which are what the data model is drawn from.",
+        "tags": [
+          "marmot"
+        ],
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Primary key."
+          },
+          {
+            "name": "name",
+            "type": "varchar(255)",
+            "nullable": false,
+            "note": "The name shown in Marmot."
+          }
+        ],
+        "deletion": {
+          "assetId": "marmot.roles",
+          "verdict": "unsafe",
+          "because": "Something is using it: 3 foreign keys point at it, so the drop fails on the constraint, a recorded statement names it. Deleting it breaks that, and the break is not reversible by re-creating an empty one.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Foreign keys pointing at it",
+              "found": "3 referencing tables: marmot-pg.public.role_permissions, marmot-pg.public.service_account_roles, marmot-pg.public.user_roles",
+              "source": "pg_constraint"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "Named by at least one of the 84 recorded statements",
+              "source": "pg_stat_statements, all 84 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "marmot.run_checkpoints",
+        "name": "run_checkpoints",
+        "kind": "table",
+        "qualifiedName": "marmot-pg.public.run_checkpoints",
+        "description": "Marmot catalog table run_checkpoints. 7 columns in the database; the snapshot keeps its key columns, which are what the data model is drawn from.",
+        "tags": [
+          "marmot"
+        ],
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Primary key."
+          },
+          {
+            "name": "run_id",
+            "type": "uuid",
+            "constraint": "FK",
+            "nullable": false,
+            "note": "references runs.id."
+          }
+        ],
+        "deletion": {
+          "assetId": "marmot.run_checkpoints",
+          "verdict": "unsafe",
+          "because": "Something is using it: a recorded statement names it. Deleting it breaks that, and the break is not reversible by re-creating an empty one.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "Named by at least one of the 84 recorded statements",
+              "source": "pg_stat_statements, all 84 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "marmot.run_entities",
+        "name": "run_entities",
+        "kind": "table",
+        "qualifiedName": "marmot-pg.public.run_entities",
+        "description": "Marmot catalog table run_entities. 8 columns in the database; the snapshot keeps its key columns, which are what the data model is drawn from.",
+        "tags": [
+          "marmot"
+        ],
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Primary key."
+          },
+          {
+            "name": "run_id",
+            "type": "uuid",
+            "constraint": "FK",
+            "nullable": false,
+            "note": "references runs.id."
+          }
+        ],
+        "deletion": {
+          "assetId": "marmot.run_entities",
+          "verdict": "unsafe",
+          "because": "Something is using it: a recorded statement names it. Deleting it breaks that, and the break is not reversible by re-creating an empty one.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "Named by at least one of the 84 recorded statements",
+              "source": "pg_stat_statements, all 84 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "marmot.run_history",
+        "name": "run_history",
+        "kind": "table",
+        "qualifiedName": "marmot-pg.public.run_history",
+        "description": "Marmot catalog table run_history. 13 columns in the database; the snapshot keeps its key columns, which are what the data model is drawn from.",
+        "tags": [
+          "marmot"
+        ],
+        "columns": [
+          {
+            "name": "id",
+            "type": "varchar(255)",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Primary key."
+          },
+          {
+            "name": "asset_id",
+            "type": "varchar(255)",
+            "constraint": "FK",
+            "nullable": false,
+            "note": "references assets.id."
+          }
+        ],
+        "deletion": {
+          "assetId": "marmot.run_history",
+          "verdict": "no sign of use",
+          "because": "Nothing catalogued reads it, nothing references it, and none of the statements captured on this service name it. That is an argument for asking whoever owns it, not for deleting it: no last-write time exists anywhere in this snapshot, and a consumer connecting with a plain connection string leaves no trace here at all.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "None of the 84 statements recorded on this service name it",
+              "source": "pg_stat_statements, all 84 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "marmot.runs",
+        "name": "runs",
+        "kind": "table",
+        "qualifiedName": "marmot-pg.public.runs",
+        "description": "Marmot catalog table runs. 11 columns in the database; the snapshot keeps its key columns, which are what the data model is drawn from.",
+        "tags": [
+          "marmot"
+        ],
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Primary key."
+          }
+        ],
+        "deletion": {
+          "assetId": "marmot.runs",
+          "verdict": "unsafe",
+          "because": "Something is using it: 3 foreign keys point at it, so the drop fails on the constraint, a recorded statement names it. Deleting it breaks that, and the break is not reversible by re-creating an empty one.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Foreign keys pointing at it",
+              "found": "3 referencing tables: marmot-pg.public.ingestion_job_runs, marmot-pg.public.run_checkpoints, marmot-pg.public.run_entities",
+              "source": "pg_constraint"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "Named by at least one of the 84 recorded statements",
+              "source": "pg_stat_statements, all 84 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "marmot.schema_version",
+        "name": "schema_version",
+        "kind": "table",
+        "qualifiedName": "marmot-pg.public.schema_version",
+        "description": "Marmot catalog table schema_version. No keys and no column list in this snapshot: nothing references it and it references nothing.",
+        "tags": [
+          "marmot"
+        ],
+        "columns": [],
+        "deletion": {
+          "assetId": "marmot.schema_version",
+          "verdict": "unsafe",
+          "because": "Something is using it: a recorded statement names it. Deleting it breaks that, and the break is not reversible by re-creating an empty one.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "Named by at least one of the 84 recorded statements",
+              "source": "pg_stat_statements, all 84 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "marmot.search_index",
+        "name": "search_index",
+        "kind": "table",
+        "qualifiedName": "marmot-pg.public.search_index",
+        "description": "Marmot catalog table search_index. No keys and no column list in this snapshot: nothing references it and it references nothing.",
+        "tags": [
+          "marmot"
+        ],
+        "columns": [],
+        "deletion": {
+          "assetId": "marmot.search_index",
+          "verdict": "unsafe",
+          "because": "Something is using it: a recorded statement names it. Deleting it breaks that, and the break is not reversible by re-creating an empty one.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "Named by at least one of the 84 recorded statements",
+              "source": "pg_stat_statements, all 84 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "marmot.service_account_api_keys",
+        "name": "service_account_api_keys",
+        "kind": "table",
+        "qualifiedName": "marmot-pg.public.service_account_api_keys",
+        "description": "Marmot catalog table service_account_api_keys. 7 columns in the database; the snapshot keeps its key columns, which are what the data model is drawn from.",
+        "tags": [
+          "marmot",
+          "credentials",
+          "agent-blocked"
+        ],
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Primary key."
+          },
+          {
+            "name": "service_account_id",
+            "type": "uuid",
+            "constraint": "FK",
+            "nullable": false,
+            "note": "references service_accounts.id."
+          },
+          {
+            "name": "name",
+            "type": "varchar(255)",
+            "constraint": "UQ",
+            "nullable": false,
+            "note": "Unique."
+          }
+        ],
+        "deletion": {
+          "assetId": "marmot.service_account_api_keys",
+          "verdict": "no sign of use",
+          "because": "Nothing catalogued reads it, nothing references it, and none of the statements captured on this service name it. That is an argument for asking whoever owns it, not for deleting it: no last-write time exists anywhere in this snapshot, and a consumer connecting with a plain connection string leaves no trace here at all.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "None of the 84 statements recorded on this service name it",
+              "source": "pg_stat_statements, all 84 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "marmot.service_account_roles",
+        "name": "service_account_roles",
+        "kind": "table",
+        "qualifiedName": "marmot-pg.public.service_account_roles",
+        "description": "Marmot catalog table service_account_roles. 2 columns in the database; the snapshot keeps its key columns, which are what the data model is drawn from.",
+        "tags": [
+          "marmot"
+        ],
+        "columns": [
+          {
+            "name": "service_account_id",
+            "type": "uuid",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Part of the composite primary key, references service_accounts.id."
+          },
+          {
+            "name": "role_id",
+            "type": "uuid",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Part of the composite primary key, references roles.id."
+          }
+        ],
+        "deletion": {
+          "assetId": "marmot.service_account_roles",
+          "verdict": "no sign of use",
+          "because": "Nothing catalogued reads it, nothing references it, and none of the statements captured on this service name it. That is an argument for asking whoever owns it, not for deleting it: no last-write time exists anywhere in this snapshot, and a consumer connecting with a plain connection string leaves no trace here at all.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "None of the 84 statements recorded on this service name it",
+              "source": "pg_stat_statements, all 84 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "marmot.service_accounts",
+        "name": "service_accounts",
+        "kind": "table",
+        "qualifiedName": "marmot-pg.public.service_accounts",
+        "description": "Marmot catalog table service_accounts. 8 columns in the database; the snapshot keeps its key columns, which are what the data model is drawn from.",
+        "tags": [
+          "marmot"
+        ],
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Primary key."
+          },
+          {
+            "name": "name",
+            "type": "varchar(255)",
+            "nullable": false,
+            "note": "The name shown in Marmot."
+          },
+          {
+            "name": "created_by",
+            "type": "uuid",
+            "constraint": "FK",
+            "nullable": true,
+            "note": "references users.id."
+          }
+        ],
+        "deletion": {
+          "assetId": "marmot.service_accounts",
+          "verdict": "unsafe",
+          "because": "Something is using it: 2 foreign keys point at it, so the drop fails on the constraint. Deleting it breaks that, and the break is not reversible by re-creating an empty one.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Foreign keys pointing at it",
+              "found": "2 referencing tables: marmot-pg.public.service_account_api_keys, marmot-pg.public.service_account_roles",
+              "source": "pg_constraint"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "None of the 84 statements recorded on this service name it",
+              "source": "pg_stat_statements, all 84 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "marmot.sso_team_mappings",
+        "name": "sso_team_mappings",
+        "kind": "table",
+        "qualifiedName": "marmot-pg.public.sso_team_mappings",
+        "description": "Marmot catalog table sso_team_mappings. 7 columns in the database; the snapshot keeps its key columns, which are what the data model is drawn from.",
+        "tags": [
+          "marmot"
+        ],
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Primary key."
+          },
+          {
+            "name": "team_id",
+            "type": "uuid",
+            "constraint": "FK",
+            "nullable": false,
+            "note": "references teams.id."
+          }
+        ],
+        "deletion": {
+          "assetId": "marmot.sso_team_mappings",
+          "verdict": "no sign of use",
+          "because": "Nothing catalogued reads it, nothing references it, and none of the statements captured on this service name it. That is an argument for asking whoever owns it, not for deleting it: no last-write time exists anywhere in this snapshot, and a consumer connecting with a plain connection string leaves no trace here at all.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "None of the 84 statements recorded on this service name it",
+              "source": "pg_stat_statements, all 84 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "marmot.summary_counts",
+        "name": "summary_counts",
+        "kind": "table",
+        "qualifiedName": "marmot-pg.public.summary_counts",
+        "description": "Marmot catalog table summary_counts. No keys and no column list in this snapshot: nothing references it and it references nothing.",
+        "tags": [
+          "marmot"
+        ],
+        "columns": [],
+        "deletion": {
+          "assetId": "marmot.summary_counts",
+          "verdict": "unsafe",
+          "because": "Something is using it: a recorded statement names it. Deleting it breaks that, and the break is not reversible by re-creating an empty one.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "Named by at least one of the 84 recorded statements",
+              "source": "pg_stat_statements, all 84 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "marmot.system_secrets",
+        "name": "system_secrets",
+        "kind": "table",
+        "qualifiedName": "marmot-pg.public.system_secrets",
+        "description": "Marmot catalog table system_secrets. No keys and no column list in this snapshot: nothing references it and it references nothing.",
+        "tags": [
+          "marmot",
+          "credentials",
+          "agent-blocked"
+        ],
+        "columns": [],
+        "deletion": {
+          "assetId": "marmot.system_secrets",
+          "verdict": "unsafe",
+          "because": "Something is using it: a recorded statement names it. Deleting it breaks that, and the break is not reversible by re-creating an empty one.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "Named by at least one of the 84 recorded statements",
+              "source": "pg_stat_statements, all 84 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "marmot.team_members",
+        "name": "team_members",
+        "kind": "table",
+        "qualifiedName": "marmot-pg.public.team_members",
+        "description": "Marmot catalog table team_members. 7 columns in the database; the snapshot keeps its key columns, which are what the data model is drawn from.",
+        "tags": [
+          "marmot"
+        ],
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Primary key."
+          },
+          {
+            "name": "team_id",
+            "type": "uuid",
+            "constraint": "FK",
+            "nullable": false,
+            "note": "references teams.id."
+          },
+          {
+            "name": "user_id",
+            "type": "uuid",
+            "constraint": "FK",
+            "nullable": false,
+            "note": "references users.id."
+          }
+        ],
+        "deletion": {
+          "assetId": "marmot.team_members",
+          "verdict": "unsafe",
+          "because": "Something is using it: a recorded statement names it. Deleting it breaks that, and the break is not reversible by re-creating an empty one.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "Named by at least one of the 84 recorded statements",
+              "source": "pg_stat_statements, all 84 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "marmot.team_webhooks",
+        "name": "team_webhooks",
+        "kind": "table",
+        "qualifiedName": "marmot-pg.public.team_webhooks",
+        "description": "Marmot catalog table team_webhooks. 11 columns in the database; the snapshot keeps its key columns, which are what the data model is drawn from.",
+        "tags": [
+          "marmot"
+        ],
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Primary key."
+          },
+          {
+            "name": "team_id",
+            "type": "uuid",
+            "constraint": "FK",
+            "nullable": false,
+            "note": "references teams.id."
+          },
+          {
+            "name": "name",
+            "type": "varchar(255)",
+            "nullable": false,
+            "note": "The name shown in Marmot."
+          }
+        ],
+        "deletion": {
+          "assetId": "marmot.team_webhooks",
+          "verdict": "no sign of use",
+          "because": "Nothing catalogued reads it, nothing references it, and none of the statements captured on this service name it. That is an argument for asking whoever owns it, not for deleting it: no last-write time exists anywhere in this snapshot, and a consumer connecting with a plain connection string leaves no trace here at all.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "None of the 84 statements recorded on this service name it",
+              "source": "pg_stat_statements, all 84 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "marmot.teams",
+        "name": "teams",
+        "kind": "table",
+        "qualifiedName": "marmot-pg.public.teams",
+        "description": "Marmot catalog table teams. 11 columns in the database; the snapshot keeps its key columns, which are what the data model is drawn from.",
+        "tags": [
+          "marmot"
+        ],
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Primary key."
+          },
+          {
+            "name": "name",
+            "type": "varchar(255)",
+            "constraint": "UQ",
+            "nullable": false,
+            "note": "Unique."
+          },
+          {
+            "name": "created_by",
+            "type": "uuid",
+            "constraint": "FK",
+            "nullable": true,
+            "note": "references users.id."
+          }
+        ],
+        "deletion": {
+          "assetId": "marmot.teams",
+          "verdict": "unsafe",
+          "because": "Something is using it: 6 foreign keys point at it, so the drop fails on the constraint, a recorded statement names it. Deleting it breaks that, and the break is not reversible by re-creating an empty one.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Foreign keys pointing at it",
+              "found": "6 referencing tables: marmot-pg.public.asset_owners, marmot-pg.public.data_product_owners, marmot-pg.public.glossary_term_owners, marmot-pg.public.sso_team_mappings, marmot-pg.public.team_members, marmot-pg.public.team_webhooks",
+              "source": "pg_constraint"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "Named by at least one of the 84 recorded statements",
+              "source": "pg_stat_statements, all 84 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "marmot.telemetry_install",
+        "name": "telemetry_install",
+        "kind": "table",
+        "qualifiedName": "marmot-pg.public.telemetry_install",
+        "description": "Marmot catalog table telemetry_install. No keys and no column list in this snapshot: nothing references it and it references nothing.",
+        "tags": [
+          "marmot"
+        ],
+        "columns": [],
+        "deletion": {
+          "assetId": "marmot.telemetry_install",
+          "verdict": "unsafe",
+          "because": "Something is using it: a recorded statement names it. Deleting it breaks that, and the break is not reversible by re-creating an empty one.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "Named by at least one of the 84 recorded statements",
+              "source": "pg_stat_statements, all 84 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "marmot.user_identities",
+        "name": "user_identities",
+        "kind": "table",
+        "qualifiedName": "marmot-pg.public.user_identities",
+        "description": "Marmot catalog table user_identities. 8 columns in the database; the snapshot keeps its key columns, which are what the data model is drawn from.",
+        "tags": [
+          "marmot"
+        ],
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Primary key."
+          },
+          {
+            "name": "user_id",
+            "type": "uuid",
+            "constraint": "FK",
+            "nullable": false,
+            "note": "references users.id."
+          }
+        ],
+        "deletion": {
+          "assetId": "marmot.user_identities",
+          "verdict": "unsafe",
+          "because": "Something is using it: a recorded statement names it. Deleting it breaks that, and the break is not reversible by re-creating an empty one.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "Named by at least one of the 84 recorded statements",
+              "source": "pg_stat_statements, all 84 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "marmot.user_roles",
+        "name": "user_roles",
+        "kind": "table",
+        "qualifiedName": "marmot-pg.public.user_roles",
+        "description": "Marmot catalog table user_roles. 3 columns in the database; the snapshot keeps its key columns, which are what the data model is drawn from.",
+        "tags": [
+          "marmot"
+        ],
+        "columns": [
+          {
+            "name": "user_id",
+            "type": "uuid",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Part of the composite primary key, references users.id."
+          },
+          {
+            "name": "role_id",
+            "type": "uuid",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Part of the composite primary key, references roles.id."
+          }
+        ],
+        "deletion": {
+          "assetId": "marmot.user_roles",
+          "verdict": "unsafe",
+          "because": "Something is using it: a recorded statement names it. Deleting it breaks that, and the break is not reversible by re-creating an empty one.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "Named by at least one of the 84 recorded statements",
+              "source": "pg_stat_statements, all 84 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      },
+      {
+        "id": "marmot.users",
+        "name": "users",
+        "kind": "table",
+        "qualifiedName": "marmot-pg.public.users",
+        "description": "Marmot catalog table users. 11 columns in the database; the snapshot keeps its key columns, which are what the data model is drawn from.",
+        "tags": [
+          "marmot"
+        ],
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Primary key."
+          },
+          {
+            "name": "name",
+            "type": "varchar(255)",
+            "nullable": false,
+            "note": "The name shown in Marmot."
+          }
+        ],
+        "deletion": {
+          "assetId": "marmot.users",
+          "verdict": "unsafe",
+          "because": "Something is using it: 16 foreign keys point at it, so the drop fails on the constraint, a recorded statement names it. Deleting it breaks that, and the break is not reversible by re-creating an empty one.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "None catalogued",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Foreign keys pointing at it",
+              "found": "16 referencing tables: marmot-pg.public.api_keys, marmot-pg.public.asset_owners, marmot-pg.public.asset_rules, marmot-pg.public.asset_subscriptions, marmot-pg.public.asset_terms, marmot-pg.public.data_product_owners, marmot-pg.public.data_products, marmot-pg.public.doc_pages, marmot-pg.public.glossary_term_owners, marmot-pg.public.notifications, marmot-pg.public.product_images, marmot-pg.public.service_accounts, marmot-pg.public.team_members, marmot-pg.public.teams, marmot-pg.public.user_identities, marmot-pg.public.user_roles",
+              "source": "pg_constraint"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "Named by at least one of the 84 recorded statements",
+              "source": "pg_stat_statements, all 84 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      }
+    ],
+    "note": "Descriptions and tags as catalogued. Edits made in the browser live in that browser and are not in this file."
+  },
+  "lineage": {
+    "upstreamServices": [],
+    "downstreamServices": [],
+    "reachesEventually": [],
+    "inbound": [],
+    "outbound": [],
+    "internalHops": 61,
+    "integrations": [
+      {
+        "type": "application_service_credential",
+        "thisServiceIs": "source",
+        "peer": "marmot-catalog",
+        "active": true,
+        "description": "Marmot catalog database."
+      }
+    ],
+    "note": "Lineage is catalogued from connector configuration and schemas, not traced at runtime. A `dataset` confidence means the tables are known to be connected without the column mapping being read."
+  },
+  "boundaries": {
+    "doNotRead": [
+      {
+        "assetId": "marmot.api_keys",
+        "name": "marmot-pg.public.api_keys",
+        "tag": "credentials",
+        "reason": "Passwords, tokens, keys or connection strings. Do not read it, and never copy it anywhere."
+      },
+      {
+        "assetId": "marmot.api_keys",
+        "name": "marmot-pg.public.api_keys",
+        "tag": "agent-blocked",
+        "reason": "Agents must not read this: it holds secrets, credentials or raw personal data."
+      },
+      {
+        "assetId": "marmot.service_account_api_keys",
+        "name": "marmot-pg.public.service_account_api_keys",
+        "tag": "credentials",
+        "reason": "Passwords, tokens, keys or connection strings. Do not read it, and never copy it anywhere."
+      },
+      {
+        "assetId": "marmot.service_account_api_keys",
+        "name": "marmot-pg.public.service_account_api_keys",
+        "tag": "agent-blocked",
+        "reason": "Agents must not read this: it holds secrets, credentials or raw personal data."
+      },
+      {
+        "assetId": "marmot.system_secrets",
+        "name": "marmot-pg.public.system_secrets",
+        "tag": "credentials",
+        "reason": "Passwords, tokens, keys or connection strings. Do not read it, and never copy it anywhere."
+      },
+      {
+        "assetId": "marmot.system_secrets",
+        "name": "marmot-pg.public.system_secrets",
+        "tag": "agent-blocked",
+        "reason": "Agents must not read this: it holds secrets, credentials or raw personal data."
+      }
+    ],
+    "handleCarefully": [],
+    "note": "These come from the data, and apply to reads. What may be done to the service itself is in `policy`, and an operation absent from all three of its lists is one nobody has considered: treat it as forbidden."
+  }
+}

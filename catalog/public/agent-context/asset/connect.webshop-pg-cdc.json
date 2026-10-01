@@ -1,0 +1,125 @@
+{
+  "assetId": "connect.webshop-pg-cdc",
+  "name": "webshop-pg-cdc",
+  "qualifiedName": "kafkaconnect-30e121dd.webshop-pg-cdc",
+  "kind": "connector",
+  "serviceId": "kafkaconnect-30e121dd",
+  "serviceName": "kafkaconnect-30e121dd",
+  "serviceType": "Kafka Connect",
+  "description": "Debezium 3.1.0 PostgresConnector. Tables public.customers, products, orders, order_items. Slot debezium_webshop, unwrap SMT, Avro converters.",
+  "descriptionReview": {
+    "author": "the catalog snapshot",
+    "at": "2026-09-15",
+    "state": "accepted",
+    "sources": [
+      "this catalog, authored when the project was walked"
+    ]
+  },
+  "owners": [],
+  "tags": [
+    {
+      "tag": "cdc",
+      "meaning": "Captured by change data capture, so every row change is replicated downstream."
+    },
+    {
+      "tag": "running",
+      "meaning": "Expected to run continuously. If it stops, everything downstream of it goes stale."
+    }
+  ],
+  "columns": [
+    {
+      "name": "connector.class",
+      "type": "io.debezium.connector.postgresql.PostgresConnector",
+      "note": "Debezium implementation doing the capture"
+    },
+    {
+      "name": "plugin.name",
+      "type": "pgoutput",
+      "note": "Logical decoding output plugin, built into Postgres so nothing extra is installed"
+    },
+    {
+      "name": "slot.name",
+      "type": "debezium_webshop",
+      "note": "Replication slot; it holds WAL on the source while the connector is down"
+    },
+    {
+      "name": "topic.prefix",
+      "type": "webshop",
+      "note": "Prefixes every topic this connector writes, hence webshop.public.*"
+    },
+    {
+      "name": "snapshot.mode",
+      "type": "initial",
+      "note": "Snapshot the tables once, then stream changes"
+    },
+    {
+      "name": "decimal.handling.mode",
+      "type": "string",
+      "note": "Why numeric columns arrive downstream as strings rather than bytes"
+    }
+  ],
+  "facts": [
+    {
+      "what": "Columns",
+      "value": "6",
+      "origin": "captured",
+      "source": "this catalog, from the service schema"
+    },
+    {
+      "what": "Last write",
+      "value": "Unknown. No tool read for this project reports a last-write or last-produce time.",
+      "origin": "derived",
+      "source": "the set of tools read for this project"
+    }
+  ],
+  "findings": [],
+  "deletion": {
+    "assetId": "connect.webshop-pg-cdc",
+    "verdict": "cannot tell",
+    "because": "Nothing here shows it being used, but no tool here can see who reads a connector. Absent evidence is not evidence of absence, so this is a question for somebody who knows the system rather than a verdict.",
+    "evidence": [
+      {
+        "what": "Downstream readers",
+        "found": "None catalogued",
+        "source": "this catalog, from connector configuration and schemas"
+      },
+      {
+        "what": "Usage telemetry",
+        "found": "Nothing in this snapshot reports reads of a connector",
+        "source": "—"
+      },
+      {
+        "what": "Last write",
+        "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+        "source": "—"
+      }
+    ]
+  },
+  "diagnosis": {
+    "assetId": "connect.webshop-pg-cdc",
+    "name": "kafkaconnect-30e121dd.webshop-pg-cdc",
+    "chain": [],
+    "verdict": "Nothing feeds kafkaconnect-30e121dd.webshop-pg-cdc in this catalog, so there is no upstream chain to blame. If it looks wrong, the cause is in whatever writes it or in the thing reading it.",
+    "freshness": "No hop in this chain measures its own delay, so there is no end-to-end figure. Consumer lag is the only latency this project captures, and there is no Kafka hop here to read it from.",
+    "boundary": "The walk stops where Aiven can see: the last hop inside the platform. Whatever reads the end of this chain — a dashboard, a job, somebody's notebook — is invisible here, and is where a symptom nothing upstream explains usually turns out to live."
+  },
+  "policy": {
+    "serviceId": "kafkaconnect-30e121dd",
+    "allowed": [
+      "read connector status",
+      "read metrics"
+    ],
+    "needsApproval": [
+      "restart a connector",
+      "resume a connector",
+      "pause a connector"
+    ],
+    "forbidden": [
+      "delete a connector",
+      "edit connector configuration"
+    ],
+    "because": "The only path from the webshop database to every downstream copy. A deleted connector loses its offsets, and the rebuild replays from whatever the slot still holds.",
+    "basis": "written for this service, overriding what its criticality would give it"
+  },
+  "note": "Descriptions, tags and owners are editable in the browser, and those edits live in that browser rather than in this file. Everything marked captured names the Aiven tool it came from and when it was read."
+}

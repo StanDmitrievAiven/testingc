@@ -1,0 +1,237 @@
+{
+  "assetId": "kafka.webshop.public.order_items",
+  "name": "webshop.public.order_items",
+  "qualifiedName": "kafka-1b5cb1e7.webshop.public.order_items",
+  "kind": "topic",
+  "serviceId": "kafka-1b5cb1e7",
+  "serviceName": "kafka-1b5cb1e7",
+  "serviceType": "Kafka",
+  "description": "CDC topic. Avro value subject webshop.public.order_items-value.",
+  "descriptionReview": {
+    "author": "the catalog snapshot",
+    "at": "2026-09-15",
+    "state": "accepted",
+    "sources": [
+      "this catalog, authored when the project was walked"
+    ]
+  },
+  "owners": [],
+  "tags": [
+    {
+      "tag": "cdc",
+      "meaning": "Captured by change data capture, so every row change is replicated downstream."
+    },
+    {
+      "tag": "avro",
+      "meaning": "Encoded as Avro against a registry schema; a reader needs that schema to decode it."
+    }
+  ],
+  "columns": [
+    {
+      "name": "id",
+      "type": "long",
+      "nullable": false,
+      "note": "Surrogate key"
+    },
+    {
+      "name": "order_id",
+      "type": "long",
+      "nullable": false,
+      "note": "FK to orders.id"
+    },
+    {
+      "name": "product_id",
+      "type": "long",
+      "nullable": false,
+      "note": "FK to products.id"
+    },
+    {
+      "name": "quantity",
+      "type": "int",
+      "nullable": false,
+      "note": "Units ordered; the same amount leaves products.inventory"
+    },
+    {
+      "name": "unit_price",
+      "type": "string",
+      "nullable": false,
+      "note": "Price charged at order time, deliberately not the current products.price"
+    },
+    {
+      "name": "__op",
+      "type": "string?",
+      "nullable": true,
+      "note": "Debezium op (c/u/d/r)"
+    },
+    {
+      "name": "__source_ts_ms",
+      "type": "long?",
+      "nullable": true,
+      "note": "Source commit timestamp"
+    },
+    {
+      "name": "__deleted",
+      "type": "string?",
+      "nullable": true,
+      "note": "ExtractNewRecordState flag"
+    }
+  ],
+  "facts": [
+    {
+      "what": "Partitions",
+      "value": "3, replication 3",
+      "origin": "captured",
+      "source": "aiven_kafka_topic_get",
+      "capturedAt": "2026-09-15T12:10:00Z"
+    },
+    {
+      "what": "Columns",
+      "value": "8",
+      "origin": "captured",
+      "source": "this catalog, from the service schema"
+    },
+    {
+      "what": "Retained",
+      "value": "0.15 GB across 3 partitions, kept 168 hours",
+      "origin": "captured",
+      "source": "aiven_kafka_topic_get",
+      "capturedAt": "2026-09-15T12:10:00Z"
+    },
+    {
+      "what": "In-sync replicas",
+      "value": "minimum 1 required, 3 observed",
+      "origin": "captured",
+      "source": "aiven_kafka_topic_get",
+      "capturedAt": "2026-09-15T12:10:00Z"
+    },
+    {
+      "what": "Serialization",
+      "value": "Avro, value subject webshop.public.order_items-value, version not read",
+      "origin": "captured",
+      "source": "aiven_kafka_schema_registry_subjects",
+      "capturedAt": "2026-09-15T12:10:00Z"
+    },
+    {
+      "what": "Last write",
+      "value": "Unknown. No tool read for this project reports a last-write or last-produce time.",
+      "origin": "derived",
+      "source": "the set of tools read for this project"
+    }
+  ],
+  "findings": [],
+  "stream": {
+    "assetId": "kafka.webshop.public.order_items",
+    "format": "Avro",
+    "keySubject": "webshop.public.order_items-key",
+    "valueSubject": "webshop.public.order_items-value",
+    "subjectStrategy": "TopicNameStrategy — the subject is the topic name with -key or -value appended",
+    "registry": "Karapace on kafka-1b5cb1e7, not a separate Confluent cluster",
+    "envelopeFields": [
+      "__deleted",
+      "__op",
+      "__source_ts_ms"
+    ],
+    "capturedAt": "2026-09-15T12:10:00Z",
+    "consumers": [
+      {
+        "group": "ch-webshop-order_items-avro-v1",
+        "behindRecords": 7,
+        "retainedRecords": 1566802,
+        "percentOfRetention": 0
+      }
+    ],
+    "note": "One consumer group was read. A topic can carry many, and this lists the ones captured rather than the ones that exist."
+  },
+  "deletion": {
+    "assetId": "kafka.webshop.public.order_items",
+    "verdict": "unsafe",
+    "because": "Something is using it: 8 catalogued downstream readers, consumer group ch-webshop-order_items-avro-v1. Deleting it breaks that, and the break is not reversible by re-creating an empty one.",
+    "evidence": [
+      {
+        "what": "Downstream readers",
+        "found": "8 catalogued hops out: clickhouse-2a6274d2.service_kafka-1b5cb1e7.order_items",
+        "source": "this catalog, from connector configuration and schemas"
+      },
+      {
+        "what": "Consumer groups",
+        "found": "ch-webshop-order_items-avro-v1 is reading it, 7 records behind out of 1,566,802 retained",
+        "source": "aiven_kafka_topic_get"
+      },
+      {
+        "what": "Last write",
+        "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+        "source": "—"
+      }
+    ]
+  },
+  "cost": {
+    "usdPerMonth": 0.48,
+    "share": 0.00165,
+    "basis": "retained bytes",
+    "method": "0.15 GB retained of the 90 GB on this broker, applied to $289.81 a month. Disk is one of several things the plan buys, so this is a floor rather than the full cost."
+  },
+  "diagnosis": {
+    "assetId": "kafka.webshop.public.order_items",
+    "name": "kafka-1b5cb1e7.webshop.public.order_items",
+    "chain": [
+      {
+        "assetId": "connect.webshop-pg-cdc",
+        "name": "kafkaconnect-30e121dd.webshop-pg-cdc",
+        "serviceId": "kafkaconnect-30e121dd",
+        "serviceName": "kafkaconnect-30e121dd",
+        "distance": 1,
+        "via": "webshop-pg-cdc · Debezium pgoutput",
+        "health": "ok",
+        "why": "webshop-pg-cdc is RUNNING with 1 of 1 tasks running.",
+        "findings": []
+      },
+      {
+        "assetId": "pg.public.order_items",
+        "name": "pg-37c7de3b.public.order_items",
+        "serviceId": "pg-37c7de3b",
+        "serviceName": "pg-37c7de3b",
+        "distance": 1,
+        "via": "webshop-pg-cdc · Debezium pgoutput",
+        "health": "ok",
+        "why": "Nothing captured here explains a data problem.",
+        "findings": []
+      },
+      {
+        "assetId": "app.webshop-simulator",
+        "name": "application.webshop-simulator",
+        "serviceId": "webshop-simulator",
+        "serviceName": "webshop-simulator",
+        "distance": 2,
+        "via": "application_service_credential",
+        "health": "unknown",
+        "why": "No facts or metrics were captured for this service, so it cannot be cleared or blamed.",
+        "findings": []
+      }
+    ],
+    "verdict": "No hop upstream of kafka-1b5cb1e7.webshop.public.order_items explains it. Checked 3 hops upstream across 3 services. 1 of them could not be assessed at all (webshop-simulator), so this is \"nothing found\" rather than \"nothing wrong\". Look at whatever reads this, or at the query producing the symptom.",
+    "freshness": "No hop in this chain measures its own delay, so there is no end-to-end figure. Consumer lag is the only latency this project captures, and there is no Kafka hop here to read it from.",
+    "boundary": "The walk stops where Aiven can see: the last hop inside the platform. Whatever reads the end of this chain — a dashboard, a job, somebody's notebook — is invisible here, and is where a symptom nothing upstream explains usually turns out to live."
+  },
+  "policy": {
+    "serviceId": "kafka-1b5cb1e7",
+    "allowed": [
+      "read metadata",
+      "read metrics",
+      "read topic configuration",
+      "read consumer lag"
+    ],
+    "needsApproval": [
+      "raise retention",
+      "restart a broker",
+      "add partitions"
+    ],
+    "forbidden": [
+      "delete a topic",
+      "lower retention",
+      "reduce replication factor"
+    ],
+    "because": "Three brokers make a rolling restart survivable, but lowering retention deletes records a lagging consumer has not read yet, and no amount of purpose makes that recoverable.",
+    "basis": "written for this service, overriding what its criticality would give it"
+  },
+  "note": "Descriptions, tags and owners are editable in the browser, and those edits live in that browser rather than in this file. Everything marked captured names the Aiven tool it came from and when it was read."
+}

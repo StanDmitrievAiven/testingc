@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { ArrowLeftIcon, ArrowRightIcon, PencilIcon } from 'lucide-react'
 import { LineageCanvas } from '@/components/lineage/lineage-canvas'
+import { OwnerEditor } from '@/components/owner-editor'
 import { PageHeader } from '@/components/page-header'
 import { TagEditor } from '@/components/tag-editor'
 import { Badge } from '@/components/ui/badge'
@@ -11,9 +12,13 @@ import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { catalog } from '@/data/catalog'
 import { ServiceIcon } from '@/lib/aiven-service-icons/ServiceIcon'
 import { ICON_SIZES } from '@/lib/aiven-service-icons/icons.js'
+import { assetContext, type AssetContext } from '@/lib/asset-context'
+import type { AssetCost, DeletionReview } from '@/lib/asset-review'
+import { DiagnosisPanel } from '@/components/diagnosis-panel'
 import { useCatalogEdits } from '@/lib/catalog-edits'
 import { ASSET_HANDLE, buildModelGraph, buildSchemaGraph } from '@/lib/lineage-graph'
 import {
@@ -33,6 +38,7 @@ import {
   isRuntime,
   kindLabel,
   lineageForAsset,
+  resolveOwners,
   serviceById,
   stacksForService,
   typeLabel,
@@ -122,6 +128,143 @@ function EditableText({
   )
 }
 
+/**
+ * The consolidated document, rendered. Same module the JSON is emitted from — G8 asks for that
+ * explicitly, and the reason is not tidiness: a UI that assembles its own view of an asset will
+ * eventually disagree with the file an agent fetched, and nobody will notice until the two are
+ * quoted at each other in an incident.
+ */
+function AssetDocument({ context }: { context: AssetContext }) {
+  const origins = {
+    captured: 'read from an Aiven tool',
+    authored: 'written by somebody',
+    derived: 'computed from the readings',
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      {context.findings.length ? (
+        <ul className="flex flex-col gap-2">
+          {context.findings.map((finding) => (
+            <li key={finding.kind} className="rounded-lg border p-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant={finding.severity === 'danger' ? 'destructive' : finding.severity === 'caution' ? 'warning' : 'secondary'}>
+                  {finding.severity}
+                </Badge>
+                <span className="text-sm font-medium">{finding.title}</span>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">{finding.detail}</p>
+              <p className="mt-1 text-xs text-muted-foreground/70">
+                <code>{finding.source}</code>
+                {finding.capturedAt ? `, read ${finding.capturedAt.slice(0, 10)}` : null}
+              </p>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
+      {context.stream ? (
+        // Stuart Mould's list: the things a consumer author needs and currently learns by
+        // consuming the topic and guessing.
+        <div className="flex flex-col gap-1.5 rounded-lg border p-3 text-sm">
+          <span className="font-medium">How to read this stream</span>
+          <span className="text-muted-foreground">
+            {context.stream.format}, through {context.stream.registry}.
+          </span>
+          <span className="text-xs text-muted-foreground">
+            Subjects <code>{context.stream.keySubject}</code> and <code>{context.stream.valueSubject}</code>.{' '}
+            {context.stream.subjectStrategy}.
+          </span>
+          {context.stream.envelopeFields?.length ? (
+            <span className="text-xs text-muted-foreground">
+              The pipeline adds {context.stream.envelopeFields.map((field) => <code key={field}>{field} </code>)} to
+              every record, so a consumer written from the source table's columns will meet fields nobody mentioned.
+            </span>
+          ) : null}
+          {context.stream.consumers.map((consumer) => (
+            <span key={consumer.group} className="text-xs text-muted-foreground">
+              <code>{consumer.group}</code> is {consumer.behindRecords.toLocaleString()} records behind, which is{' '}
+              {consumer.percentOfRetention}% of what the topic still keeps.
+            </span>
+          ))}
+          <span className="text-xs text-muted-foreground/70">{context.stream.note}</span>
+        </div>
+      ) : null}
+
+      <div className="flex flex-col gap-1 rounded-lg border p-3">
+        <span className="text-sm font-medium">Facts</span>
+        <dl className="mt-1 flex flex-col gap-1.5">
+          {context.facts.map((fact) => (
+            <div key={fact.what} className="text-xs">
+              <dt className="inline font-medium">{fact.what}: </dt>
+              <dd className="inline text-muted-foreground">{fact.value}</dd>
+              <Tooltip>
+                <TooltipTrigger className="ml-1 text-muted-foreground/60 underline decoration-dotted">
+                  {fact.origin}
+                </TooltipTrigger>
+                <TooltipContent>
+                  {origins[fact.origin]} — <code>{fact.source}</code>
+                  {fact.capturedAt ? `, read ${fact.capturedAt.slice(0, 10)}` : ''}
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          ))}
+        </dl>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * "Is this safe to delete", answered with what the evidence supports and no more. The verdict is
+ * never "yes": the strongest available is "no sign of use", and the copy pushes the reader towards
+ * asking an owner rather than acting, because this is the one mistake here that does not undo.
+ */
+function AssetReview({ review, cost }: { review: DeletionReview; cost?: AssetCost }) {
+  const [open, setOpen] = useState(false)
+  const tone = {
+    unsafe: 'destructive',
+    'cannot tell': 'secondary',
+    'no sign of use': 'warning',
+  } as const
+
+  return (
+    <div className="flex flex-col gap-2 rounded-lg border p-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-sm font-medium">Safe to delete?</span>
+        <Badge variant={tone[review.verdict]}>{review.verdict}</Badge>
+        {cost ? (
+          <Tooltip>
+            <TooltipTrigger className="text-xs text-muted-foreground underline decoration-dotted">
+              ~${cost.usdPerMonth}/month
+            </TooltipTrigger>
+            <TooltipContent className="max-w-80">{cost.method}</TooltipContent>
+          </Tooltip>
+        ) : null}
+      </div>
+      <p className="text-sm text-muted-foreground">{review.because}</p>
+      <button
+        type="button"
+        className="self-start text-xs text-muted-foreground underline"
+        onClick={() => setOpen(!open)}
+      >
+        {open ? 'Hide evidence' : `Show the ${review.evidence.length} things this is based on`}
+      </button>
+      {open ? (
+        <ul className="flex flex-col gap-1.5">
+          {review.evidence.map((item) => (
+            <li key={item.what} className="text-xs">
+              <span className="font-medium">{item.what}: </span>
+              <span className="text-muted-foreground">{item.found}</span>
+              {item.source === '—' ? null : <span className="text-muted-foreground/70"> [{item.source}]</span>}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  )
+}
+
 function Inspector({ node, navigate }: { node: TreeNode; navigate: Navigate }) {
   const [tab, setTab] = useState('overview')
   const service = serviceById(node.serviceId)
@@ -130,6 +273,8 @@ function Inspector({ node, navigate }: { node: TreeNode; navigate: Navigate }) {
   const connected = hops.up.length + hops.down.length
   const stacks = stacksForService(node.serviceId)
   const edits = useCatalogEdits()
+  const owners = resolveOwners(node.id)
+  const context = asset ? assetContext(asset.id) : undefined
   // A folder describes itself now; only a service node still speaks for its service.
   const description = asset
     ? edits.assetDescription(asset.id, asset.description)
@@ -220,6 +365,22 @@ function Inspector({ node, navigate }: { node: TreeNode; navigate: Navigate }) {
         tags={edits.tagsFor(node.id, asset?.tags)}
         onChange={(next) => edits.setTags(node.id, next)}
       />
+
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-sm font-medium">Owner</span>
+        {/* Resolved rather than read: a table with no owner of its own shows its schema's, marked
+            as inherited, which is the difference between an empty field and an unanswered one. */}
+        <OwnerEditor
+          label={node.label}
+          owners={owners.owners}
+          inheritedFrom={owners.inheritedFrom}
+          onChange={(next) => edits.setOwners(node.id, next)}
+        />
+      </div>
+
+      {context ? <AssetDocument context={context} /> : null}
+      {context ? <AssetReview review={context.deletion} cost={context.cost} /> : null}
+      {asset ? <DiagnosisPanel assetId={asset.id} /> : null}
 
       <div className="flex flex-wrap gap-2">
         {service ? (

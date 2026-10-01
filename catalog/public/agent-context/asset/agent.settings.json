@@ -1,0 +1,104 @@
+{
+  "assetId": "agent.settings",
+  "name": "settings",
+  "qualifiedName": "analytics-agent-pg.public.settings",
+  "kind": "table",
+  "serviceId": "analytics-agent-pg",
+  "serviceName": "analytics-agent-pg",
+  "serviceType": "PostgreSQL",
+  "description": "Key-value settings for the analytics agent.",
+  "descriptionReview": {
+    "author": "the catalog snapshot",
+    "at": "2026-09-15",
+    "state": "accepted",
+    "sources": [
+      "this catalog, authored when the project was walked"
+    ]
+  },
+  "owners": [],
+  "tags": [
+    {
+      "tag": "app",
+      "meaning": "A deployed application rather than a stored dataset."
+    }
+  ],
+  "columns": [
+    {
+      "name": "key",
+      "type": "varchar",
+      "constraint": "PK",
+      "nullable": false,
+      "note": "Setting name, one row per setting"
+    },
+    {
+      "name": "value",
+      "type": "text",
+      "nullable": true,
+      "note": "Setting value; null means unset rather than false"
+    },
+    {
+      "name": "updated_at",
+      "type": "timestamptz",
+      "nullable": false,
+      "note": "When the setting last changed"
+    }
+  ],
+  "facts": [
+    {
+      "what": "Columns",
+      "value": "3",
+      "origin": "captured",
+      "source": "this catalog, from the service schema"
+    },
+    {
+      "what": "Last write",
+      "value": "Unknown. No tool read for this project reports a last-write or last-produce time.",
+      "origin": "derived",
+      "source": "the set of tools read for this project"
+    }
+  ],
+  "findings": [],
+  "deletion": {
+    "assetId": "agent.settings",
+    "verdict": "cannot tell",
+    "because": "Nothing here shows it being used, but no statement statistics were captured for this service. Absent evidence is not evidence of absence, so this is a question for somebody who knows the system rather than a verdict.",
+    "evidence": [
+      {
+        "what": "Downstream readers",
+        "found": "None catalogued",
+        "source": "this catalog, from connector configuration and schemas"
+      },
+      {
+        "what": "Recorded statements",
+        "found": "pg_stat_statements was not read for this service",
+        "source": "—"
+      },
+      {
+        "what": "Last write",
+        "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+        "source": "—"
+      }
+    ]
+  },
+  "diagnosis": {
+    "assetId": "agent.settings",
+    "name": "analytics-agent-pg.public.settings",
+    "chain": [],
+    "verdict": "Nothing feeds analytics-agent-pg.public.settings in this catalog, so there is no upstream chain to blame. If it looks wrong, the cause is in whatever writes it or in the thing reading it.",
+    "freshness": "No hop in this chain measures its own delay, so there is no end-to-end figure. Consumer lag is the only latency this project captures, and there is no Kafka hop here to read it from.",
+    "boundary": "The walk stops where Aiven can see: the last hop inside the platform. Whatever reads the end of this chain — a dashboard, a job, somebody's notebook — is invisible here, and is where a symptom nothing upstream explains usually turns out to live."
+  },
+  "policy": {
+    "serviceId": "analytics-agent-pg",
+    "allowed": [
+      "read metadata"
+    ],
+    "needsApproval": [],
+    "forbidden": [
+      "everything else"
+    ],
+    "because": "No policy has been written for this service, so it is read-only until somebody writes one.",
+    "basis": "unclassified, so the most cautious setting rather than a convenient one"
+  },
+  "note": "Descriptions, tags and owners are editable in the browser, and those edits live in that browser rather than in this file. Everything marked captured names the Aiven tool it came from and when it was read."
+}

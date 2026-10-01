@@ -1,0 +1,110 @@
+{
+  "assetId": "trino.trino_kafka_config",
+  "name": "trino_kafka_config",
+  "qualifiedName": "trino-hub-pg.public.trino_kafka_config",
+  "kind": "table",
+  "serviceId": "trino-hub-pg",
+  "serviceName": "trino-hub-pg",
+  "serviceType": "PostgreSQL",
+  "description": "Kafka connector configuration blob for Trino.",
+  "descriptionReview": {
+    "author": "the catalog snapshot",
+    "at": "2026-09-15",
+    "state": "accepted",
+    "sources": [
+      "this catalog, authored when the project was walked"
+    ]
+  },
+  "owners": [],
+  "tags": [
+    {
+      "tag": "control-plane",
+      "meaning": "Runs the platform itself. Not business data, but breaking it breaks tooling."
+    }
+  ],
+  "columns": [
+    {
+      "name": "id",
+      "type": "integer",
+      "constraint": "PK",
+      "nullable": false,
+      "note": "Surrogate key"
+    },
+    {
+      "name": "config_text",
+      "type": "text",
+      "nullable": false,
+      "note": "Connector config kept verbatim, not parsed into columns"
+    },
+    {
+      "name": "created_at",
+      "type": "timestamptz",
+      "nullable": true,
+      "note": "When the config was stored"
+    }
+  ],
+  "facts": [
+    {
+      "what": "Columns",
+      "value": "3",
+      "origin": "captured",
+      "source": "this catalog, from the service schema"
+    },
+    {
+      "what": "Last write",
+      "value": "Unknown. No tool read for this project reports a last-write or last-produce time.",
+      "origin": "derived",
+      "source": "the set of tools read for this project"
+    }
+  ],
+  "findings": [],
+  "deletion": {
+    "assetId": "trino.trino_kafka_config",
+    "verdict": "cannot tell",
+    "because": "Nothing here shows it being used, but no statement statistics were captured for this service. Absent evidence is not evidence of absence, so this is a question for somebody who knows the system rather than a verdict.",
+    "evidence": [
+      {
+        "what": "Downstream readers",
+        "found": "None catalogued",
+        "source": "this catalog, from connector configuration and schemas"
+      },
+      {
+        "what": "Recorded statements",
+        "found": "pg_stat_statements was not read for this service",
+        "source": "—"
+      },
+      {
+        "what": "Last write",
+        "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+        "source": "—"
+      }
+    ]
+  },
+  "diagnosis": {
+    "assetId": "trino.trino_kafka_config",
+    "name": "trino-hub-pg.public.trino_kafka_config",
+    "chain": [],
+    "verdict": "Nothing feeds trino-hub-pg.public.trino_kafka_config in this catalog, so there is no upstream chain to blame. If it looks wrong, the cause is in whatever writes it or in the thing reading it.",
+    "freshness": "No hop in this chain measures its own delay, so there is no end-to-end figure. Consumer lag is the only latency this project captures, and there is no Kafka hop here to read it from.",
+    "boundary": "The walk stops where Aiven can see: the last hop inside the platform. Whatever reads the end of this chain — a dashboard, a job, somebody's notebook — is invisible here, and is where a symptom nothing upstream explains usually turns out to live."
+  },
+  "policy": {
+    "serviceId": "trino-hub-pg",
+    "allowed": [
+      "read metadata",
+      "read metrics",
+      "apply pending maintenance"
+    ],
+    "needsApproval": [
+      "restart",
+      "change plan",
+      "change ip filter"
+    ],
+    "forbidden": [
+      "delete the service"
+    ],
+    "because": "Standard means an outage degrades a tool rather than a pipeline. Maintenance can go in unattended, since the alternative is Aiven applying it at its own deadline anyway.",
+    "basis": "derived from standard criticality in a production environment"
+  },
+  "note": "Descriptions, tags and owners are editable in the browser, and those edits live in that browser rather than in this file. Everything marked captured names the Aiven tool it came from and when it was read."
+}

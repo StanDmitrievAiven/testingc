@@ -6,7 +6,7 @@
 // The shape is deliberately dull. A policy is three lists and a sentence; a runbook is steps plus
 // the four things wiki runbooks leave out — what breaks while it runs, how long it takes, whether
 // it can be undone, and the check that proves it worked.
-import type { AgentPolicy, ChangeFreeze, Runbook } from '../types.ts'
+import type { AgentPolicy, ChangeFreeze, Classification, Runbook } from '../types.ts'
 
 /**
  * Nothing changes during the summit. This outranks every finding: an agent that has found a real
@@ -74,6 +74,46 @@ export const defaultPolicy: Omit<AgentPolicy, 'serviceId'> = {
 }
 
 /**
+ * What criticality actually changes, which is the question the classification exists to answer.
+ * Tagging a service `production` and then treating it identically is theatre; the difference has to
+ * be designed and visible, so here it is as one table: the same operation moves between unattended,
+ * approval and forbidden as the cost of being wrong rises.
+ *
+ * The five policies above override this where somebody has written something more specific about a
+ * particular service. This table is what every other classified service gets.
+ */
+export const policyByCriticality: Record<Classification['criticality'], Omit<AgentPolicy, 'serviceId'>> = {
+  critical: {
+    allowed: ['read metadata', 'read metrics'],
+    needsApproval: ['restart', 'change plan', 'change ip filter', 'apply pending maintenance'],
+    forbidden: ['delete the service', 'disable backups', 'downgrade the plan'],
+    because:
+      'Critical means there is no second copy and no cheap way back, so every change that interrupts it waits for somebody who can weigh the interruption.',
+  },
+  important: {
+    allowed: ['read metadata', 'read metrics'],
+    needsApproval: ['restart', 'change plan', 'change ip filter', 'apply pending maintenance'],
+    forbidden: ['delete the service', 'disable backups'],
+    because:
+      'Important means a failure costs time rather than data: the contents can be rebuilt from upstream, so the plan may move with approval, but nothing deletes it unattended.',
+  },
+  standard: {
+    allowed: ['read metadata', 'read metrics', 'apply pending maintenance'],
+    needsApproval: ['restart', 'change plan', 'change ip filter'],
+    forbidden: ['delete the service'],
+    because:
+      'Standard means an outage degrades a tool rather than a pipeline. Maintenance can go in unattended, since the alternative is Aiven applying it at its own deadline anyway.',
+  },
+  low: {
+    allowed: ['read metadata', 'read metrics', 'apply pending maintenance', 'restart', 'power off'],
+    needsApproval: ['change plan', 'delete the service'],
+    forbidden: [],
+    because:
+      'Low means nothing downstream notices. Restarting is cheaper than asking, but deletion still waits for a human, because a service classified low by inference is exactly the case where the inference might be wrong.',
+  },
+}
+
+/**
  * One play per finding kind. Two of these answer findings nothing currently triggers — a dead
  * connector and a consumer about to pass retention — which is the point: the play has to exist
  * before the incident, not be written during it.
@@ -82,6 +122,8 @@ export const runbooks: Runbook[] = [
   {
     forFinding: 'disk-filling',
     title: 'Give the service more disk before it fills',
+    docUrl: 'https://aiven.io/docs/platform/concepts/dynamic-disk-sizing',
+    deviations: ['disk-without-plan', 'rebuild-not-edit'],
     steps: [
       'Check the change freeze and the maintenance window before anything else.',
       'Confirm the trend on a fresh reading: aiven_service_metrics_fetch with period=week, metric disk_usage.',
@@ -101,6 +143,8 @@ export const runbooks: Runbook[] = [
   {
     forFinding: 'open-to-internet',
     title: 'Close the service to the open internet',
+    docUrl: 'https://aiven.io/docs/platform/howto/restrict-access',
+    deviations: ['pg-no-hba'],
     steps: [
       'List what actually connects: the integrations in this catalog plus any application using a service credential.',
       'Collect the egress ranges those clients come from. A guess here locks out production.',
@@ -117,6 +161,8 @@ export const runbooks: Runbook[] = [
   {
     forFinding: 'single-node',
     title: 'Restart a service that has no second node',
+    docUrl: 'https://aiven.io/docs/products/postgresql/concepts/high-availability',
+    deviations: ['rebuild-not-edit'],
     steps: [
       'Treat this as planned downtime and announce it, because that is what it is.',
       'Check no platform maintenance is already in flight for the same service.',
@@ -133,6 +179,8 @@ export const runbooks: Runbook[] = [
   {
     forFinding: 'pending-maintenance',
     title: 'Apply platform maintenance before its deadline',
+    docUrl: 'https://aiven.io/docs/platform/concepts/maintenance-window',
+    deviations: ['auto-updates', 'rebuild-not-edit'],
     steps: [
       'Read the deadlines from aiven_service_get: after them, Aiven applies the update whether or not it suits you.',
       'Pick a window before the earliest deadline and inside the service maintenance window.',
@@ -147,6 +195,7 @@ export const runbooks: Runbook[] = [
   {
     forFinding: 'connector-down',
     title: 'Bring a stopped change data capture connector back',
+    docUrl: 'https://aiven.io/docs/products/postgresql/concepts/aiven-db-migrate',
     steps: [
       'Read the trace with aiven_kafka_connect_get_connector_status before restarting anything.',
       'If the trace names authentication or a missing replication slot, fix that first: a restart will only fail again.',
@@ -162,6 +211,8 @@ export const runbooks: Runbook[] = [
   {
     forFinding: 'lag-against-retention',
     title: 'Stop a lagging consumer from losing records',
+    docUrl: 'https://aiven.io/docs/products/kafka/howto/create-topic',
+    deviations: ['kafka-no-broker-access'],
     steps: [
       'Compare how far behind the consumer is with how long the topic keeps records. That gap is the deadline.',
       'Raise retention first with aiven_kafka_topic_update. It is cheap, reversible, and buys time to fix the cause.',
@@ -185,6 +236,52 @@ export const runbooks: Runbook[] = [
     takes: 'One call.',
     rollback: 'Not applicable.',
     verify: 'The window ends within the last hour. Until it does, the finding stays unactionable.',
+  },
+  {
+    forFinding: 'weak-password-encryption',
+    title: 'Move Postgres password encryption from md5 to scram-sha-256',
+    docUrl: 'https://aiven.io/docs/tools/api',
+    deviations: ['pg-no-superuser', 'pg-no-hba'],
+    steps: [
+      'Set password_encryption to scram-sha-256 with aiven_service_update. Existing md5 hashes keep working; the setting only decides how the next password is stored.',
+      'List the roles still holding an md5 hash: select usename, passwd like \'SCRAM-SHA-256%\' as scram from pg_shadow.',
+      'Reset each password, which is what actually converts the hash. A role nobody resets stays on md5 indefinitely.',
+      'Update every client that holds the password in the same window, including service integrations.',
+    ],
+    whileItRuns:
+      'Changing the setting alone interrupts nothing. Resetting a password does: every client still using the old one fails to authenticate until it is updated, and a forgotten integration is how that becomes an outage.',
+    takes: 'Seconds for the setting. The password resets take as long as finding every client that holds one.',
+    rollback: 'Reversible: set the parameter back and reset the passwords again, which has the same client impact in reverse.',
+    verify: 'pg_shadow shows every role on a SCRAM-SHA-256 hash, and each client reconnects.',
+  },
+  {
+    forFinding: 'powered-off',
+    title: 'Decide what a stopped service is for',
+    steps: [
+      'Check what depends on it before anything else. In this catalog that is the blast radius on the service page; if it is empty, nothing here reads it.',
+      'Ask whoever created it whether it is finished with. A stopped service is ambiguous by nature: it is either abandoned or deliberately parked.',
+      'If it is finished with, delete it — and take the backups with it deliberately rather than by accident.',
+      'If it is parked, tighten the ip filter now rather than at the moment it powers back on.',
+    ],
+    whileItRuns: 'Nothing, while it stays off. Powering it back on restores a service whose software is a month behind.',
+    takes: 'Minutes to decide, seconds to act.',
+    rollback:
+      'Deletion is the one-way door here. Backups outlive the service for a limited window, and that window is not a plan.',
+    verify: 'Either the service is gone from the project, or it is running again with an ip filter that is not 0.0.0.0/0.',
+  },
+  {
+    forFinding: 'backup-stale',
+    title: 'Find out why backups stopped',
+    steps: [
+      'Read the backup list from aiven_service_get and find where the gap starts.',
+      'Check the service was actually running across the gap. A stopped service has nothing to back up, and that is the common answer.',
+      'If it was running, check disk: a full disk stops backups before it stops anything else a person notices.',
+      'If neither explains it, raise it with Aiven rather than waiting for the next one to succeed.',
+    ],
+    whileItRuns: 'Nothing. Investigating a backup gap changes nothing about the service.',
+    takes: 'Minutes.',
+    rollback: 'Not applicable: nothing is being changed.',
+    verify: 'A backup exists with a timestamp inside the objective window, on a fresh read rather than the snapshot.',
   },
   {
     forFinding: 'no-termination-protection',

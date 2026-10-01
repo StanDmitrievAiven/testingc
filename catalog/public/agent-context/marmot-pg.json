@@ -2,9 +2,121 @@
   "serviceId": "marmot-pg",
   "name": "marmot-pg",
   "type": "pg",
+  "coverage": {
+    "facts": true,
+    "metrics": false,
+    "classified": true,
+    "policy": true,
+    "contact": true
+  },
+  "classification": {
+    "serviceId": "marmot-pg",
+    "environment": "production",
+    "criticality": "standard",
+    "provenance": "inferred",
+    "evidence": "The catalog store behind the Marmot application. It holds descriptions of data rather than data, and a failure degrades a tool rather than a pipeline."
+  },
+  "objectives": [
+    {
+      "id": "disk-headroom",
+      "appliesTo": [
+        "*"
+      ],
+      "title": "At least a quarter of a year of disk runway",
+      "target": 90,
+      "unit": "days to full",
+      "breach": 30,
+      "rationale": "Ninety days is long enough to plan a plan change into a maintenance window and get it approved. Thirty is short enough that the window is now, because on a single node growing the disk is an outage that has to be scheduled with whoever depends on it.",
+      "owner": "Data platform team",
+      "reviewed": "2026-09-08"
+    },
+    {
+      "id": "evidence-freshness",
+      "appliesTo": [
+        "*"
+      ],
+      "title": "Evidence no more than a day behind the snapshot it arrived in",
+      "target": 24,
+      "unit": "hours behind capture",
+      "rationale": "A capacity claim is worth exactly as much as the reading under it. A day is the point where a trend computed from the numbers stops describing the service as it is now, and an agent acting on it is acting on history.",
+      "owner": "Data platform team",
+      "reviewed": "2026-09-08"
+    },
+    {
+      "id": "cpu-spike",
+      "appliesTo": [
+        "*"
+      ],
+      "title": "A peak worth naming",
+      "target": 50,
+      "unit": "percent peak",
+      "rationale": "Below half a core-equivalent nothing is worth reporting. This decides only whether a spike gets mentioned, never whether anything is done about it.",
+      "owner": "Data platform team",
+      "reviewed": "2026-09-08"
+    },
+    {
+      "id": "cpu-sustained",
+      "appliesTo": [
+        "*"
+      ],
+      "title": "Sustained load, as opposed to bursts",
+      "target": 20,
+      "unit": "percent average",
+      "rationale": "Under a fifth on average, a high peak is a query arriving rather than a service running out of room. The pair matters because resizing on a peak is the most common expensive mistake available here.",
+      "owner": "Data platform team",
+      "reviewed": "2026-09-08"
+    },
+    {
+      "id": "downsize-headroom",
+      "appliesTo": [
+        "*"
+      ],
+      "title": "A smaller plan must still leave a third of its disk free",
+      "target": 67,
+      "unit": "percent of the smaller disk in use",
+      "rationale": "The saving is worth having and the second migration is not. Moving down to a rung that is already two-thirds full buys a few pounds a month and a disk-full incident a quarter later, which costs more than the plan ever saved. A third free is the margin that makes the move a decision rather than a bet on growth stopping.",
+      "owner": "Data platform team",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "downsize-utilisation",
+      "appliesTo": [
+        "*"
+      ],
+      "title": "Peaks well inside the plan before shrinking it",
+      "target": 60,
+      "unit": "percent peak of any resource",
+      "rationale": "Averages are what make downsizing look free: a service at five percent mean CPU that touches sixty-five under load will meet that load on a smaller plan too, and meet it worse. The peak is the number the plan actually has to survive, so it is the one that decides.",
+      "owner": "Data platform team",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "backup-freshness",
+      "appliesTo": [
+        "*"
+      ],
+      "title": "A restore point from within the last two days",
+      "target": 48,
+      "unit": "hours since the last backup",
+      "breach": 168,
+      "rationale": "Aiven takes daily backups, so two days allows one to fail without raising anything. A week means the restore point has quietly moved from yesterday to last Tuesday, which is only discovered at the worst possible moment.",
+      "owner": "Data platform team",
+      "reviewed": "2026-09-15"
+    }
+  ],
+  "capabilities": {
+    "nodes": 1,
+    "failoverAvailable": false,
+    "diskGb": 8,
+    "maxConnections": 25,
+    "canAddDisk": false,
+    "backupsRetained": 2,
+    "latestBackupAt": "2026-09-14T10:08:05Z",
+    "source": "aiven_service_get"
+  },
   "captured": {
     "catalog": "2026-09-07T07:20:00Z",
-    "serviceFacts": "2026-09-07T07:20:00Z",
+    "serviceFacts": "2026-09-15T08:20:00Z",
     "metrics": "2026-09-08T10:55:00Z",
     "connectors": "2026-09-08T10:58:00Z",
     "purposeLog": "2026-09-04T12:05:41.806Z",
@@ -13,13 +125,20 @@
   "policy": {
     "serviceId": "marmot-pg",
     "allowed": [
-      "read metadata"
+      "read metadata",
+      "read metrics",
+      "apply pending maintenance"
     ],
-    "needsApproval": [],
+    "needsApproval": [
+      "restart",
+      "change plan",
+      "change ip filter"
+    ],
     "forbidden": [
-      "everything else"
+      "delete the service"
     ],
-    "because": "No policy has been written for this service, so it is read-only until somebody writes one."
+    "because": "Standard means an outage degrades a tool rather than a pipeline. Maintenance can go in unattended, since the alternative is Aiven applying it at its own deadline anyway.",
+    "basis": "derived from standard criticality in a production environment"
   },
   "freeze": {
     "active": true,
@@ -27,14 +146,145 @@
     "to": "2026-09-12T23:59:59Z",
     "reason": "Data Innovation Summit. The project is on stage, so nothing changes unattended, however good the reason."
   },
+  "owners": [],
   "contacts": [
     {
       "email": "stan.dmitriev@aiven.io",
       "why": "Last touched it: changed it 2 times in the event log"
     }
   ],
-  "ownership": "Observed, not declared: Marmot's asset_owners and teams tables are empty, so these are the people Aiven lists as contacts and the people the event log shows changing this service.",
-  "findings": [],
+  "ownership": "Nobody has been declared as an owner here, so the names below are observed rather than responsible: Marmot's asset_owners and teams tables are empty, and these are the people Aiven lists as contacts and the people the event log shows changing this service.",
+  "findings": [
+    {
+      "kind": "open-to-internet",
+      "severity": "danger",
+      "title": "Reachable from 0.0.0.0/0",
+      "detail": "The ip filter allows every address, so the only thing between this service and the internet is its password.",
+      "source": "aiven_service_get",
+      "capturedAt": "2026-09-15T08:20:00Z",
+      "docUrl": "https://aiven.io/docs/platform/howto/restrict-access",
+      "runbook": {
+        "forFinding": "open-to-internet",
+        "title": "Close the service to the open internet",
+        "docUrl": "https://aiven.io/docs/platform/howto/restrict-access",
+        "deviations": [
+          "pg-no-hba"
+        ],
+        "steps": [
+          "List what actually connects: the integrations in this catalog plus any application using a service credential.",
+          "Collect the egress ranges those clients come from. A guess here locks out production.",
+          "Replace the ip_filter with that list using aiven_service_update, leaving 0.0.0.0/0 out.",
+          "Keep your own access in the list, or you lock yourself out along with everyone else."
+        ],
+        "whileItRuns": "Established connections survive. New connections from anything outside the list are refused immediately, which is the whole point and also the risk.",
+        "takes": "Seconds to apply.",
+        "rollback": "Reversible: put the previous filter back with the same call.",
+        "verify": "Connect from an allowed address, then from one that is not. The second attempt must fail, or the filter did not take."
+      }
+    },
+    {
+      "kind": "single-node",
+      "severity": "caution",
+      "title": "One node, so a restart is an outage",
+      "detail": "There is nothing to fail over to. Every restart, plan change and platform update is downtime that has to be timed rather than absorbed.",
+      "source": "aiven_service_get",
+      "capturedAt": "2026-09-15T08:20:00Z",
+      "docUrl": "https://aiven.io/docs/products/postgresql/concepts/high-availability",
+      "runbook": {
+        "forFinding": "single-node",
+        "title": "Restart a service that has no second node",
+        "docUrl": "https://aiven.io/docs/products/postgresql/concepts/high-availability",
+        "deviations": [
+          "rebuild-not-edit"
+        ],
+        "steps": [
+          "Treat this as planned downtime and announce it, because that is what it is.",
+          "Check no platform maintenance is already in flight for the same service.",
+          "Prefer the existing maintenance window over a restart of your own.",
+          "Restart, then watch the dependents rather than the service: it comes back before they do."
+        ],
+        "whileItRuns": "A total outage for the length of the restart. Change data capture stops and resumes from its replication slot; consumers downstream fall behind rather than lose data.",
+        "takes": "A few minutes, most of it the service coming back up.",
+        "rollback": "None. A restart cannot be undone, only waited out.",
+        "verify": "Service state RUNNING, the CDC connector back to RUNNING, and consumer lag falling across two readings rather than one."
+      }
+    },
+    {
+      "kind": "weak-password-encryption",
+      "severity": "caution",
+      "title": "Passwords are stored as md5",
+      "detail": "scram-sha-256 is the stronger scheme and the one Postgres has defaulted to since version 14; md5 is deprecated upstream. Changing the setting is a one-line call, but existing hashes only convert when each password is reset, so the work is in the clients rather than the service.",
+      "source": "aiven_service_get",
+      "capturedAt": "2026-09-15T08:20:00Z",
+      "docUrl": "https://aiven.io/docs/tools/api",
+      "runbook": {
+        "forFinding": "weak-password-encryption",
+        "title": "Move Postgres password encryption from md5 to scram-sha-256",
+        "docUrl": "https://aiven.io/docs/tools/api",
+        "deviations": [
+          "pg-no-superuser",
+          "pg-no-hba"
+        ],
+        "steps": [
+          "Set password_encryption to scram-sha-256 with aiven_service_update. Existing md5 hashes keep working; the setting only decides how the next password is stored.",
+          "List the roles still holding an md5 hash: select usename, passwd like 'SCRAM-SHA-256%' as scram from pg_shadow.",
+          "Reset each password, which is what actually converts the hash. A role nobody resets stays on md5 indefinitely.",
+          "Update every client that holds the password in the same window, including service integrations."
+        ],
+        "whileItRuns": "Changing the setting alone interrupts nothing. Resetting a password does: every client still using the old one fails to authenticate until it is updated, and a forgotten integration is how that becomes an outage.",
+        "takes": "Seconds for the setting. The password resets take as long as finding every client that holds one.",
+        "rollback": "Reversible: set the parameter back and reset the passwords again, which has the same client impact in reverse.",
+        "verify": "pg_shadow shows every role on a SCRAM-SHA-256 hash, and each client reconnects."
+      }
+    },
+    {
+      "kind": "pending-maintenance",
+      "severity": "caution",
+      "title": "1 platform update queued, no deadline set yet",
+      "detail": "No deadline has been set, so this one waits for the maintenance window rather than forcing it. It still applies eventually, and doing it deliberately is cheaper than being surprised. Queued: PostgreSQL Anonymizer version 3.1.3 is available.",
+      "source": "aiven_service_get",
+      "capturedAt": "2026-09-15T08:20:00Z",
+      "docUrl": "https://aiven.io/docs/platform/concepts/maintenance-window",
+      "runbook": {
+        "forFinding": "pending-maintenance",
+        "title": "Apply platform maintenance before its deadline",
+        "docUrl": "https://aiven.io/docs/platform/concepts/maintenance-window",
+        "deviations": [
+          "auto-updates",
+          "rebuild-not-edit"
+        ],
+        "steps": [
+          "Read the deadlines from aiven_service_get: after them, Aiven applies the update whether or not it suits you.",
+          "Pick a window before the earliest deadline and inside the service maintenance window.",
+          "Apply the updates there, oldest deadline first."
+        ],
+        "whileItRuns": "Rolling on a multi-node service, downtime on a single node. Either way it is the same interruption you would get by leaving it to the deadline, but at a time you chose.",
+        "takes": "Minutes per update, longer for a version upgrade.",
+        "rollback": "A version upgrade is one way. Plan for going forward, not back.",
+        "verify": "The pending update list is empty and the service reports the new version."
+      }
+    },
+    {
+      "kind": "no-termination-protection",
+      "severity": "info",
+      "title": "Termination protection is off",
+      "detail": "Nothing stands between a deletion call and this service, which is a cheap gap to close.",
+      "source": "aiven_service_get",
+      "capturedAt": "2026-09-15T08:20:00Z",
+      "docUrl": "https://aiven.io/docs/tools/api",
+      "runbook": {
+        "forFinding": "no-termination-protection",
+        "title": "Turn on termination protection",
+        "steps": [
+          "Set termination protection with aiven_service_update."
+        ],
+        "whileItRuns": "Nothing. It is a configuration flag, with no restart.",
+        "takes": "Seconds.",
+        "rollback": "Reversible with the same call, which is exactly why it is worth having on.",
+        "verify": "Read the service back and confirm the flag is set."
+      }
+    }
+  ],
   "readings": [],
   "dependents": {
     "datasets": 57,
@@ -48,7 +298,152 @@
     ]
   },
   "plan": {
-    "options": [],
-    "note": "No service facts were captured here, so there is no plan to price a fix against."
-  }
+    "current": {
+      "serviceType": "pg",
+      "plan": "hobbyist",
+      "cloud": "aws-eu-west-1",
+      "usdPerHour": 0.034,
+      "diskGb": 8
+    },
+    "options": [
+      {
+        "plan": "startup-4",
+        "usdPerHour": 0.151,
+        "diskGb": 80,
+        "extraUsdPerHour": 0.117,
+        "extraUsdPerMonth": 85.41,
+        "canAddDisk": true
+      }
+    ],
+    "downsize": {
+      "verdict": "already smallest",
+      "because": "hobbyist is the cheapest rung captured for this service type, so there is nothing below it to move to."
+    },
+    "note": "hobbyist cannot buy disk on its own, so more space means the next plan up and the restart that comes with it."
+  },
+  "lifecycle": {
+    "state": "RUNNING",
+    "stateReadAt": "2026-09-15T08:20:00Z",
+    "stateMeans": "Serving traffic. Normal, and the only state in which most changes are safe to attempt.",
+    "maintenanceWindow": "saturday at 06:54:35 UTC",
+    "updates": [
+      {
+        "description": "PostgreSQL Anonymizer version 3.1.3 is available.",
+        "startAt": "2026-09-14T08:35:00Z",
+        "impact": "A version upgrade on a single node is downtime for its whole duration, and it cannot be rolled back.",
+        "takes": "Ten minutes to an hour, depending on data size.",
+        "deadlineNote": "No deadline set yet, so the window is still yours to choose. That changes without notice."
+      }
+    ],
+    "note": "Impact and duration are authored per kind of update, since Aiven states what and when but not what it costs."
+  },
+  "descriptionReview": {
+    "author": "the catalog snapshot",
+    "at": "2026-09-15",
+    "state": "accepted",
+    "sources": [
+      "this catalog, authored when the project was walked"
+    ]
+  },
+  "deviations": [
+    {
+      "id": "pg-no-hba",
+      "serviceTypes": [
+        "pg"
+      ],
+      "kind": "not configurable",
+      "title": "There is no pg_hba.conf to edit",
+      "detail": "Host-based authentication is managed by the platform and not exposed. Network access is the service IP filter, and everything else is roles and grants inside the database. An agent reasoning from upstream Postgres will reach for the file first, and the file is not there.",
+      "docUrl": "https://aiven.io/docs/platform/howto/restrict-access",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "pg-no-superuser",
+      "serviceTypes": [
+        "pg"
+      ],
+      "kind": "differs from upstream",
+      "title": "avnadmin is not a superuser",
+      "detail": "The administrative account has most privileges but not superuser, so anything requiring it fails: ALTER SYSTEM, untrusted procedural languages, and a handful of extensions. Server settings change through the service configuration API instead, which applies them the supported way and survives the next node rebuild.",
+      "docUrl": "https://aiven.io/docs/tools/api",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "pg-extensions",
+      "serviceTypes": [
+        "pg"
+      ],
+      "kind": "not configurable",
+      "title": "Extensions come from a supported list, and some are not installed by CREATE EXTENSION",
+      "detail": "Only extensions Aiven packages are available, and several need enabling through service configuration rather than SQL. \"It is on PGXN\" is not a reason it can be installed here. Georg Traar named this as one of the deviations that is barely documented anywhere the customer can see.",
+      "docUrl": "https://aiven.io/docs/products/postgresql/reference/list-of-extensions",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "pg-connection-reserve",
+      "serviceTypes": [
+        "pg"
+      ],
+      "kind": "differs from upstream",
+      "title": "Not all of max_connections is yours",
+      "detail": "The platform reserves connections for its own monitoring, backup and maintenance users, so a service reporting 100 gives the application slightly fewer. Connection pooling is a managed feature rather than something installed on the node.",
+      "docUrl": "https://aiven.io/docs/products/postgresql/reference/pg-connection-limits",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "auto-updates",
+      "serviceTypes": [
+        "*"
+      ],
+      "kind": "managed automatically",
+      "title": "Minor versions and platform software update themselves",
+      "detail": "Security patches and minor version upgrades are applied in the maintenance window without being requested. A version changing between two readings of this catalog is expected behaviour rather than an incident, which is worth knowing before an agent opens one.",
+      "docUrl": "https://aiven.io/docs/platform/concepts/maintenance-window",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "platform-agents",
+      "serviceTypes": [
+        "*"
+      ],
+      "kind": "managed automatically",
+      "title": "Aiven software runs on the nodes alongside yours",
+      "detail": "Monitoring, backup and orchestration processes run on every service, hold their own database connections, and appear in statistics as sessions and queries nobody in your team wrote. Customers are not generally aware of this, so the unexplained connection is usually ours.",
+      "docUrl": "https://aiven.io/docs/platform/concepts/service-power-cycle",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "rebuild-not-edit",
+      "serviceTypes": [
+        "*"
+      ],
+      "kind": "differs from upstream",
+      "title": "Many changes replace the nodes rather than modify them",
+      "detail": "A plan change or a maintenance update generally builds new nodes and moves service to them, so node names change and anything pinned to a host or an IP breaks. This is why a plan change on a single-node service is downtime rather than a resize.",
+      "docUrl": "https://aiven.io/docs/platform/howto/scale-services",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "disk-without-plan",
+      "serviceTypes": [
+        "*"
+      ],
+      "kind": "differs from upstream",
+      "title": "Disk can sometimes grow without a plan change",
+      "detail": "On plans that support it, storage is added to the running service, which makes \"we are running out of disk\" a smaller problem here than the upstream instinct of provisioning a bigger machine. Whether this service is one of them is in the plan block.",
+      "docUrl": "https://aiven.io/docs/platform/concepts/dynamic-disk-sizing",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "backup-is-fork",
+      "serviceTypes": [
+        "*"
+      ],
+      "kind": "differs from upstream",
+      "title": "Restoring means forking to a new service",
+      "detail": "Backups are not restored in place. The supported path creates a new service at a point in time, which you then move traffic to — so a restore is a migration with a connection-string change, not an afternoon of pg_restore. Worth knowing before promising a rollback that assumes otherwise.",
+      "docUrl": "https://aiven.io/docs/platform/howto/console-fork-service",
+      "reviewed": "2026-09-15"
+    }
+  ]
 }

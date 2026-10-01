@@ -1,7 +1,7 @@
 // Reads of the operational snapshot in src/data/operations.ts. Imports are relative rather than
 // `@/` so operations.check.ts runs under plain node; nothing here touches the catalog, which keeps
 // it that way (blastRadius lives in lib/catalog.ts, where the catalog already is).
-import { queryStats, serviceEvents, serviceFacts, topicHealth, totalQueryTimeMs } from '../data/operations.ts'
+import { illustrativeEvents, queryStats, serviceEvents, serviceFacts, topicHealth, totalQueryTimeMs } from '../data/operations.ts'
 import type { QueryStat, ServiceEvent, ServiceFacts, TopicHealth } from '../types.ts'
 
 /** Re-exported so views have one import for everything about the operational snapshot. */
@@ -11,6 +11,11 @@ export function eventsForService(serviceId: string): ServiceEvent[] {
   return serviceEvents
     .filter((event) => event.serviceId === serviceId)
     .sort((a, b) => b.at.localeCompare(a.at))
+}
+
+/** Demo-only events for the Changes timeline. Deliberately not part of `eventsForService`. */
+export function illustrativeEventsFor(serviceId: string): ServiceEvent[] {
+  return illustrativeEvents.filter((event) => event.serviceId === serviceId)
 }
 
 export function factsForService(serviceId: string): ServiceFacts | undefined {

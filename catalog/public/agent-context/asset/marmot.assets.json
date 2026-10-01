@@ -1,0 +1,187 @@
+{
+  "assetId": "marmot.assets",
+  "name": "assets",
+  "qualifiedName": "marmot-pg.public.assets",
+  "kind": "table",
+  "serviceId": "marmot-pg",
+  "serviceName": "marmot-pg",
+  "serviceType": "PostgreSQL",
+  "description": "Marmot registered data assets with schema JSON and search text.",
+  "descriptionReview": {
+    "author": "the catalog snapshot",
+    "at": "2026-09-15",
+    "state": "accepted",
+    "sources": [
+      "this catalog, authored when the project was walked"
+    ]
+  },
+  "owners": [],
+  "tags": [
+    {
+      "tag": "marmot",
+      "meaning": "Belongs to the Marmot catalog service and its schema."
+    }
+  ],
+  "columns": [
+    {
+      "name": "id",
+      "type": "varchar",
+      "constraint": "PK",
+      "nullable": false,
+      "note": "Marmot's own asset id"
+    },
+    {
+      "name": "name",
+      "type": "varchar",
+      "nullable": false,
+      "note": "Asset name as displayed"
+    },
+    {
+      "name": "mrn",
+      "type": "varchar",
+      "nullable": false,
+      "note": "Marmot resource name, the identifier lineage_edges join on"
+    },
+    {
+      "name": "type",
+      "type": "varchar",
+      "nullable": false,
+      "note": "Asset kind, such as table or topic"
+    },
+    {
+      "name": "providers",
+      "type": "text[]",
+      "nullable": false,
+      "note": "Systems that reported this asset"
+    },
+    {
+      "name": "environments",
+      "type": "jsonb",
+      "nullable": false,
+      "note": "Where the asset exists, per environment"
+    },
+    {
+      "name": "description",
+      "type": "text",
+      "nullable": true,
+      "note": "Description shown in Marmot; null when nobody wrote one"
+    },
+    {
+      "name": "metadata",
+      "type": "jsonb",
+      "nullable": false,
+      "note": "Everything ingested that has no column of its own"
+    },
+    {
+      "name": "schema",
+      "type": "jsonb",
+      "nullable": false,
+      "note": "Captured column list, as JSON rather than rows"
+    },
+    {
+      "name": "sources",
+      "type": "jsonb",
+      "nullable": false,
+      "note": "Which ingestion produced this record"
+    },
+    {
+      "name": "tags",
+      "type": "text[]",
+      "nullable": false,
+      "note": "Free-form labels"
+    },
+    {
+      "name": "query",
+      "type": "text",
+      "nullable": true,
+      "note": "Flattened text the search index is built from"
+    },
+    {
+      "name": "is_stub",
+      "type": "boolean",
+      "nullable": false,
+      "note": "True for an asset only referenced by lineage, never ingested itself"
+    },
+    {
+      "name": "created_at",
+      "type": "timestamptz",
+      "nullable": false,
+      "note": "First registered"
+    },
+    {
+      "name": "updated_at",
+      "type": "timestamptz",
+      "nullable": false,
+      "note": "Last re-ingested"
+    }
+  ],
+  "facts": [
+    {
+      "what": "Columns",
+      "value": "15",
+      "origin": "captured",
+      "source": "this catalog, from the service schema"
+    },
+    {
+      "what": "Last write",
+      "value": "Unknown. No tool read for this project reports a last-write or last-produce time.",
+      "origin": "derived",
+      "source": "the set of tools read for this project"
+    }
+  ],
+  "findings": [],
+  "deletion": {
+    "assetId": "marmot.assets",
+    "verdict": "unsafe",
+    "because": "Something is using it: 10 foreign keys point at it, so the drop fails on the constraint, a recorded statement names it. Deleting it breaks that, and the break is not reversible by re-creating an empty one.",
+    "evidence": [
+      {
+        "what": "Downstream readers",
+        "found": "None catalogued",
+        "source": "this catalog, from connector configuration and schemas"
+      },
+      {
+        "what": "Foreign keys pointing at it",
+        "found": "10 referencing tables: marmot-pg.public.agent_runs, marmot-pg.public.asset_owners, marmot-pg.public.asset_rule_memberships, marmot-pg.public.asset_schedules, marmot-pg.public.asset_subscriptions, marmot-pg.public.asset_terms, marmot-pg.public.data_product_memberships, marmot-pg.public.lineage_edges, marmot-pg.public.run_history",
+        "source": "pg_constraint"
+      },
+      {
+        "what": "Recorded statements",
+        "found": "Named by at least one of the 84 recorded statements",
+        "source": "pg_stat_statements, all 84 read 2026-09-15"
+      },
+      {
+        "what": "Last write",
+        "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+        "source": "—"
+      }
+    ]
+  },
+  "diagnosis": {
+    "assetId": "marmot.assets",
+    "name": "marmot-pg.public.assets",
+    "chain": [],
+    "verdict": "Nothing feeds marmot-pg.public.assets in this catalog, so there is no upstream chain to blame. If it looks wrong, the cause is in whatever writes it or in the thing reading it.",
+    "freshness": "No hop in this chain measures its own delay, so there is no end-to-end figure. Consumer lag is the only latency this project captures, and there is no Kafka hop here to read it from.",
+    "boundary": "The walk stops where Aiven can see: the last hop inside the platform. Whatever reads the end of this chain — a dashboard, a job, somebody's notebook — is invisible here, and is where a symptom nothing upstream explains usually turns out to live."
+  },
+  "policy": {
+    "serviceId": "marmot-pg",
+    "allowed": [
+      "read metadata",
+      "read metrics",
+      "apply pending maintenance"
+    ],
+    "needsApproval": [
+      "restart",
+      "change plan",
+      "change ip filter"
+    ],
+    "forbidden": [
+      "delete the service"
+    ],
+    "because": "Standard means an outage degrades a tool rather than a pipeline. Maintenance can go in unattended, since the alternative is Aiven applying it at its own deadline anyway.",
+    "basis": "derived from standard criticality in a production environment"
+  },
+  "note": "Descriptions, tags and owners are editable in the browser, and those edits live in that browser rather than in this file. Everything marked captured names the Aiven tool it came from and when it was read."
+}

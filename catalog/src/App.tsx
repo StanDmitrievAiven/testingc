@@ -8,6 +8,7 @@ import { ServiceDetailPage, StackDetailPage } from '@/views/detail-pages'
 import { LineagePage } from '@/views/lineage-page'
 import { ApplicationsPage, ServicesPage, StacksPage } from '@/views/list-pages'
 import { CatalogPage } from '@/views/catalog-page'
+import { FleetPage } from '@/views/fleet-page'
 import { OverviewPage } from '@/views/overview-page'
 
 export default function App() {
@@ -45,6 +46,7 @@ export default function App() {
         <SidebarInset className="min-w-0 overflow-hidden">
           <div className="flex h-svh min-h-0 flex-col overflow-hidden">
             {route.page === 'overview' ? <OverviewPage navigate={navigate} /> : null}
+            {route.page === 'fleet' ? <FleetPage navigate={navigate} /> : null}
             {route.page === 'services' ? <ServicesPage navigate={navigate} /> : null}
             {route.page === 'applications' ? <ApplicationsPage navigate={navigate} /> : null}
             {route.page === 'stacks' ? <StacksPage navigate={navigate} /> : null}

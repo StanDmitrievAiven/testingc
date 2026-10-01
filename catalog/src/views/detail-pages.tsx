@@ -7,6 +7,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { LineageCanvas } from '@/components/lineage/lineage-canvas'
 import { PageHeader } from '@/components/page-header'
 import { AgentContextPanel } from '@/components/agent-context-panel'
+import { OwnerEditor } from '@/components/owner-editor'
+import { SuggestionGate } from '@/components/suggestion-gate'
 import { TagEditor } from '@/components/tag-editor'
 import { ServiceIcon } from '@/lib/aiven-service-icons/ServiceIcon'
 import { ICON_SIZES } from '@/lib/aiven-service-icons/icons.js'
@@ -24,7 +26,8 @@ import {
 } from '@/lib/catalog'
 import { useCatalogEdits } from '@/lib/catalog-edits'
 import { changesForService, fetchLiveChanges } from '@/lib/context-log'
-import { eventsForService, factsForService } from '@/lib/operations'
+import { gateStatus } from '@/lib/gate-coverage'
+import { eventsForService, factsForService, illustrativeEventsFor } from '@/lib/operations'
 import { buildDatasetGraph, buildServiceGraph } from '@/lib/lineage-graph'
 import type { Navigate } from '@/lib/routes'
 import { GitForkIcon } from 'lucide-react'
@@ -188,16 +191,23 @@ const eventLabel: Record<string, string> = {
   service_maintenance_perform: 'maintenance applied',
   service_integration_create: 'integration created',
   service_integration_delete: 'integration deleted',
+  service_update_allowed_ip_addresses: 'allowed IPs changed',
+  service_update_plan: 'plan changed',
+  service_update_storage_size: 'storage size changed',
 }
 
-function EventRow({ event }: { event: ServiceEvent }) {
+function EventRow({ event, changes }: { event: ServiceEvent; changes: ContextChange[] }) {
   // Aiven names a person by email and itself by product name, which is the distinction that
   // matters here: a platform actor means the change happened without anyone asking for it.
   const automated = !event.actor.includes('@')
+  const { status, change } = gateStatus(event, changes)
   return (
     <div className="flex flex-col gap-1 border-l-2 pl-3">
       <div className="flex flex-wrap items-center gap-2">
         <Badge variant={automated ? 'default' : 'outline'}>{automated ? 'Platform' : 'Person'}</Badge>
+        {status === 'gated' ? <Badge variant="secondary">Gated · v{change?.version}</Badge> : null}
+        {status === 'outside-gate' ? <Badge variant="warning">Outside the gate</Badge> : null}
+        {event.sample ? <Badge variant="outline">Illustrative</Badge> : null}
         <span className="text-sm">
           {eventLabel[event.type] ?? event.type.replace('service_', '').replaceAll('_', ' ')}
         </span>
@@ -206,6 +216,15 @@ function EventRow({ event }: { event: ServiceEvent }) {
         </span>
       </div>
       <p className="line-clamp-3 text-sm text-muted-foreground">{event.description}</p>
+      {status === 'outside-gate' ? (
+        <p className="text-sm">
+          No purpose was recorded for this change, so nothing says why it was made. The console, the API or
+          a tool that bypassed the MCP proxy can all do this.
+        </p>
+      ) : null}
+      {status === 'before-gate' ? (
+        <p className="text-xs text-muted-foreground">Made before the purpose gate was in place.</p>
+      ) : null}
     </div>
   )
 }
@@ -232,7 +251,8 @@ function ChangeTimeline({ serviceId }: { serviceId: string }) {
 
   const fresh = live?.serviceId === serviceId ? live.rows : null
   const changes = fresh ?? snapshot
-  const events = eventsForService(serviceId)
+  const events = [...eventsForService(serviceId), ...illustrativeEventsFor(serviceId)]
+  const outside = events.filter((event) => gateStatus(event, changes).status === 'outside-gate').length
 
   // Two sources answer two halves of "why is it like this": the proxy knows the purpose someone
   // wrote, Aiven knows what actually happened. Interleaved by time, they read as one history.
@@ -259,7 +279,9 @@ function ChangeTimeline({ serviceId }: { serviceId: string }) {
             changes.length
               ? `${changes.length} agent ${changes.length === 1 ? 'change' : 'changes'} carrying a written purpose`
               : null,
-            events.length ? `${events.length} ${events.length === 1 ? 'event' : 'events'} Aiven recorded itself` : null,
+            events.length
+              ? `${events.length} ${events.length === 1 ? 'event' : 'events'} Aiven recorded itself${outside ? ` (${outside} outside the gate)` : ''}`
+              : null,
           ]
             .filter(Boolean)
             .join(', and ')}
@@ -267,7 +289,7 @@ function ChangeTimeline({ serviceId }: { serviceId: string }) {
         </span>
       </div>
       {rows.map((row) =>
-        'change' in row ? <PurposeRow key={row.key} change={row.change} /> : <EventRow key={row.key} event={row.event} />,
+        'change' in row ? <PurposeRow key={row.key} change={row.change} /> : <EventRow key={row.key} event={row.event} changes={changes} />,
       )}
     </div>
   )
@@ -343,7 +365,10 @@ function SafetyPanel({ service }: { service: Service }) {
                 <p key={update.description} className="text-sm text-muted-foreground">
                   {update.description}{' '}
                   <span className="text-xs">
-                    Starts {when(update.startAt)}, applied by {when(update.deadline)} whatever you do.
+                    Starts {when(update.startAt)}
+                    {update.deadline
+                      ? `, applied by ${when(update.deadline)} whatever you do.`
+                      : '. No deadline set, so it waits for the maintenance window.'}
                   </span>
                 </p>
               ))}
@@ -399,7 +424,9 @@ export function ServiceDetailPage({
               <StateBadge state={service.state} />
               <Badge variant="secondary">{isRuntime(service) ? 'Runtime' : 'Service'}</Badge>
             </div>
-            <p className="text-sm text-muted-foreground">{service.notes ?? service.role}</p>
+            <p className="text-sm text-muted-foreground">
+              {edits.assetDescription(service.id, service.notes ?? service.role)}
+            </p>
           </div>
         </div>
         {/* Keyed by service id, which is also this service's id in the catalog tree, so the tags
@@ -409,6 +436,17 @@ export function ServiceDetailPage({
           tags={edits.tagsFor(service.id)}
           onChange={(next) => edits.setTags(service.id, next)}
         />
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm font-medium">Owner</span>
+          {/* A service is the top of the tree, so there is nothing above it to inherit from — but
+              what is set here is what every schema and table under it falls back to. */}
+          <OwnerEditor
+            label={service.name}
+            owners={edits.ownersFor(service.id)}
+            onChange={(next) => edits.setOwners(service.id, next)}
+          />
+        </div>
+        <SuggestionGate serviceId={service.id} />
         {stacks.length ? (
           <div className="flex flex-wrap gap-1.5">
             {stacks.map((stack) => (

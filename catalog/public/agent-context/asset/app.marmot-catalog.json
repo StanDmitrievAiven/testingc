@@ -1,0 +1,84 @@
+{
+  "assetId": "app.marmot-catalog",
+  "name": "marmot-catalog",
+  "qualifiedName": "application.marmot-catalog",
+  "kind": "application",
+  "serviceId": "marmot-catalog",
+  "serviceName": "marmot-catalog",
+  "serviceType": "Application",
+  "description": "Marmot catalog UI. Credential from marmot-pg.",
+  "descriptionReview": {
+    "author": "the catalog snapshot",
+    "at": "2026-09-15",
+    "state": "accepted",
+    "sources": [
+      "this catalog, authored when the project was walked"
+    ]
+  },
+  "owners": [],
+  "tags": [
+    {
+      "tag": "catalog",
+      "meaning": "Metadata about other assets rather than business data of its own."
+    }
+  ],
+  "columns": [],
+  "facts": [
+    {
+      "what": "Columns",
+      "value": "0",
+      "origin": "captured",
+      "source": "this catalog, from the service schema"
+    },
+    {
+      "what": "Last write",
+      "value": "Unknown. No tool read for this project reports a last-write or last-produce time.",
+      "origin": "derived",
+      "source": "the set of tools read for this project"
+    }
+  ],
+  "findings": [],
+  "deletion": {
+    "assetId": "app.marmot-catalog",
+    "verdict": "cannot tell",
+    "because": "Nothing here shows it being used, but no tool here can see who reads a application. Absent evidence is not evidence of absence, so this is a question for somebody who knows the system rather than a verdict.",
+    "evidence": [
+      {
+        "what": "Downstream readers",
+        "found": "None catalogued",
+        "source": "this catalog, from connector configuration and schemas"
+      },
+      {
+        "what": "Usage telemetry",
+        "found": "Nothing in this snapshot reports reads of a application",
+        "source": "—"
+      },
+      {
+        "what": "Last write",
+        "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+        "source": "—"
+      }
+    ]
+  },
+  "diagnosis": {
+    "assetId": "app.marmot-catalog",
+    "name": "application.marmot-catalog",
+    "chain": [],
+    "verdict": "Nothing feeds application.marmot-catalog in this catalog, so there is no upstream chain to blame. If it looks wrong, the cause is in whatever writes it or in the thing reading it.",
+    "freshness": "No hop in this chain measures its own delay, so there is no end-to-end figure. Consumer lag is the only latency this project captures, and there is no Kafka hop here to read it from.",
+    "boundary": "The walk stops where Aiven can see: the last hop inside the platform. Whatever reads the end of this chain — a dashboard, a job, somebody's notebook — is invisible here, and is where a symptom nothing upstream explains usually turns out to live."
+  },
+  "policy": {
+    "serviceId": "marmot-catalog",
+    "allowed": [
+      "read metadata"
+    ],
+    "needsApproval": [],
+    "forbidden": [
+      "everything else"
+    ],
+    "because": "No policy has been written for this service, so it is read-only until somebody writes one.",
+    "basis": "unclassified, so the most cautious setting rather than a convenient one"
+  },
+  "note": "Descriptions, tags and owners are editable in the browser, and those edits live in that browser rather than in this file. Everything marked captured names the Aiven tool it came from and when it was read."
+}

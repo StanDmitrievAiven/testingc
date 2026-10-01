@@ -1,0 +1,332 @@
+{
+  "serviceId": "os-ddec4cf-dhtest",
+  "name": "os-ddec4cf-dhtest",
+  "type": "opensearch",
+  "coverage": {
+    "facts": true,
+    "metrics": false,
+    "classified": true,
+    "policy": true,
+    "contact": false
+  },
+  "classification": {
+    "serviceId": "os-ddec4cf-dhtest",
+    "environment": "test",
+    "criticality": "low",
+    "provenance": "inferred",
+    "evidence": "Three independent signals agree, which is the bar a name alone never clears: the name ends in \"dhtest\", no asset or lineage edge in the catalog references it, and it has been powered off since 11 August with backups standing still since the same day."
+  },
+  "objectives": [
+    {
+      "id": "disk-headroom",
+      "appliesTo": [
+        "*"
+      ],
+      "title": "At least a quarter of a year of disk runway",
+      "target": 90,
+      "unit": "days to full",
+      "breach": 30,
+      "rationale": "Ninety days is long enough to plan a plan change into a maintenance window and get it approved. Thirty is short enough that the window is now, because on a single node growing the disk is an outage that has to be scheduled with whoever depends on it.",
+      "owner": "Data platform team",
+      "reviewed": "2026-09-08"
+    },
+    {
+      "id": "evidence-freshness",
+      "appliesTo": [
+        "*"
+      ],
+      "title": "Evidence no more than a day behind the snapshot it arrived in",
+      "target": 24,
+      "unit": "hours behind capture",
+      "rationale": "A capacity claim is worth exactly as much as the reading under it. A day is the point where a trend computed from the numbers stops describing the service as it is now, and an agent acting on it is acting on history.",
+      "owner": "Data platform team",
+      "reviewed": "2026-09-08"
+    },
+    {
+      "id": "cpu-spike",
+      "appliesTo": [
+        "*"
+      ],
+      "title": "A peak worth naming",
+      "target": 50,
+      "unit": "percent peak",
+      "rationale": "Below half a core-equivalent nothing is worth reporting. This decides only whether a spike gets mentioned, never whether anything is done about it.",
+      "owner": "Data platform team",
+      "reviewed": "2026-09-08"
+    },
+    {
+      "id": "cpu-sustained",
+      "appliesTo": [
+        "*"
+      ],
+      "title": "Sustained load, as opposed to bursts",
+      "target": 20,
+      "unit": "percent average",
+      "rationale": "Under a fifth on average, a high peak is a query arriving rather than a service running out of room. The pair matters because resizing on a peak is the most common expensive mistake available here.",
+      "owner": "Data platform team",
+      "reviewed": "2026-09-08"
+    },
+    {
+      "id": "downsize-headroom",
+      "appliesTo": [
+        "*"
+      ],
+      "title": "A smaller plan must still leave a third of its disk free",
+      "target": 67,
+      "unit": "percent of the smaller disk in use",
+      "rationale": "The saving is worth having and the second migration is not. Moving down to a rung that is already two-thirds full buys a few pounds a month and a disk-full incident a quarter later, which costs more than the plan ever saved. A third free is the margin that makes the move a decision rather than a bet on growth stopping.",
+      "owner": "Data platform team",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "downsize-utilisation",
+      "appliesTo": [
+        "*"
+      ],
+      "title": "Peaks well inside the plan before shrinking it",
+      "target": 60,
+      "unit": "percent peak of any resource",
+      "rationale": "Averages are what make downsizing look free: a service at five percent mean CPU that touches sixty-five under load will meet that load on a smaller plan too, and meet it worse. The peak is the number the plan actually has to survive, so it is the one that decides.",
+      "owner": "Data platform team",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "backup-freshness",
+      "appliesTo": [
+        "*"
+      ],
+      "title": "A restore point from within the last two days",
+      "target": 48,
+      "unit": "hours since the last backup",
+      "breach": 168,
+      "rationale": "Aiven takes daily backups, so two days allows one to fail without raising anything. A week means the restore point has quietly moved from yesterday to last Tuesday, which is only discovered at the worst possible moment.",
+      "owner": "Data platform team",
+      "reviewed": "2026-09-15"
+    }
+  ],
+  "capabilities": {
+    "nodes": 1,
+    "failoverAvailable": false,
+    "diskGb": 80,
+    "backupsRetained": 28,
+    "latestBackupAt": "2026-08-11T07:09:56Z",
+    "source": "aiven_service_get"
+  },
+  "captured": {
+    "catalog": "2026-09-07T07:20:00Z",
+    "serviceFacts": "2026-09-15T08:20:00Z",
+    "metrics": "2026-09-08T10:55:00Z",
+    "connectors": "2026-09-08T10:58:00Z",
+    "purposeLog": "2026-09-04T12:05:41.806Z",
+    "policy": "authored, not captured"
+  },
+  "policy": {
+    "serviceId": "os-ddec4cf-dhtest",
+    "allowed": [
+      "read metadata",
+      "read metrics",
+      "apply pending maintenance",
+      "restart",
+      "power off"
+    ],
+    "needsApproval": [
+      "change plan",
+      "delete the service"
+    ],
+    "forbidden": [],
+    "because": "Low means nothing downstream notices. Restarting is cheaper than asking, but deletion still waits for a human, because a service classified low by inference is exactly the case where the inference might be wrong.",
+    "basis": "derived from low criticality in a test environment"
+  },
+  "freeze": {
+    "active": true,
+    "from": "2026-09-08T00:00:00Z",
+    "to": "2026-09-12T23:59:59Z",
+    "reason": "Data Innovation Summit. The project is on stage, so nothing changes unattended, however good the reason."
+  },
+  "owners": [],
+  "contacts": [],
+  "ownership": "Nobody has been declared as an owner here, so the names below are observed rather than responsible: Marmot's asset_owners and teams tables are empty, and these are the people Aiven lists as contacts and the people the event log shows changing this service.",
+  "findings": [
+    {
+      "kind": "open-to-internet",
+      "severity": "caution",
+      "title": "Open to 0.0.0.0/0 the moment it powers on",
+      "detail": "The ip filter allows every address. Nothing answers while the service is powered off, so this is dormant rather than exploitable — and it stops being dormant the instant somebody starts it, which is the wrong moment to find out.",
+      "source": "aiven_service_get",
+      "capturedAt": "2026-09-15T08:20:00Z",
+      "docUrl": "https://aiven.io/docs/platform/howto/restrict-access",
+      "runbook": {
+        "forFinding": "open-to-internet",
+        "title": "Close the service to the open internet",
+        "docUrl": "https://aiven.io/docs/platform/howto/restrict-access",
+        "deviations": [
+          "pg-no-hba"
+        ],
+        "steps": [
+          "List what actually connects: the integrations in this catalog plus any application using a service credential.",
+          "Collect the egress ranges those clients come from. A guess here locks out production.",
+          "Replace the ip_filter with that list using aiven_service_update, leaving 0.0.0.0/0 out.",
+          "Keep your own access in the list, or you lock yourself out along with everyone else."
+        ],
+        "whileItRuns": "Established connections survive. New connections from anything outside the list are refused immediately, which is the whole point and also the risk.",
+        "takes": "Seconds to apply.",
+        "rollback": "Reversible: put the previous filter back with the same call.",
+        "verify": "Connect from an allowed address, then from one that is not. The second attempt must fail, or the filter did not take."
+      }
+    },
+    {
+      "kind": "powered-off",
+      "severity": "caution",
+      "title": "Powered off, with no backup since 2026-08-11",
+      "detail": "Nothing is running and nothing depends on it in this catalog. A stopped service is ambiguous rather than safe: it is either finished with, in which case it should be deleted along with its 28 stored backups, or it is parked, in which case its open ip filter and unprotected state are waiting for whoever starts it again.",
+      "source": "aiven_service_get",
+      "capturedAt": "2026-09-15T08:20:00Z",
+      "docUrl": "https://aiven.io/docs/platform/concepts/service-power-cycle",
+      "runbook": {
+        "forFinding": "powered-off",
+        "title": "Decide what a stopped service is for",
+        "steps": [
+          "Check what depends on it before anything else. In this catalog that is the blast radius on the service page; if it is empty, nothing here reads it.",
+          "Ask whoever created it whether it is finished with. A stopped service is ambiguous by nature: it is either abandoned or deliberately parked.",
+          "If it is finished with, delete it — and take the backups with it deliberately rather than by accident.",
+          "If it is parked, tighten the ip filter now rather than at the moment it powers back on."
+        ],
+        "whileItRuns": "Nothing, while it stays off. Powering it back on restores a service whose software is a month behind.",
+        "takes": "Minutes to decide, seconds to act.",
+        "rollback": "Deletion is the one-way door here. Backups outlive the service for a limited window, and that window is not a plan.",
+        "verify": "Either the service is gone from the project, or it is running again with an ip filter that is not 0.0.0.0/0."
+      }
+    },
+    {
+      "kind": "no-termination-protection",
+      "severity": "info",
+      "title": "Termination protection is off",
+      "detail": "Nothing stands between a deletion call and this service, which is a cheap gap to close.",
+      "source": "aiven_service_get",
+      "capturedAt": "2026-09-15T08:20:00Z",
+      "docUrl": "https://aiven.io/docs/tools/api",
+      "runbook": {
+        "forFinding": "no-termination-protection",
+        "title": "Turn on termination protection",
+        "steps": [
+          "Set termination protection with aiven_service_update."
+        ],
+        "whileItRuns": "Nothing. It is a configuration flag, with no restart.",
+        "takes": "Seconds.",
+        "rollback": "Reversible with the same call, which is exactly why it is worth having on.",
+        "verify": "Read the service back and confirm the flag is set."
+      }
+    }
+  ],
+  "readings": [],
+  "dependents": {
+    "datasets": 0,
+    "downstreamAssets": [],
+    "downstreamServices": [],
+    "credentialHolders": [],
+    "stacks": []
+  },
+  "plan": {
+    "options": [],
+    "downsize": {
+      "verdict": "no smaller rung priced",
+      "because": "No plan prices were captured for this service type, so a cheaper rung cannot be priced even if one exists."
+    },
+    "note": "No plan prices were captured for opensearch, so a fix here cannot state its cost yet."
+  },
+  "lifecycle": {
+    "state": "POWEROFF",
+    "stateReadAt": "2026-09-15T08:20:00Z",
+    "stateMeans": "Deliberately stopped. It answers nothing, and the stored data and its backups remain, so it is not free. Powering on takes minutes.",
+    "maintenanceWindow": "sunday at 10:23:34 UTC",
+    "updates": [],
+    "note": "Nothing is queued as of this capture. Updates appear with little notice, so this is a reading rather than a promise."
+  },
+  "descriptionReview": {
+    "author": "the catalog snapshot",
+    "at": "2026-09-15",
+    "state": "accepted",
+    "sources": [
+      "this catalog, authored when the project was walked"
+    ]
+  },
+  "deviations": [
+    {
+      "id": "auto-updates",
+      "serviceTypes": [
+        "*"
+      ],
+      "kind": "managed automatically",
+      "title": "Minor versions and platform software update themselves",
+      "detail": "Security patches and minor version upgrades are applied in the maintenance window without being requested. A version changing between two readings of this catalog is expected behaviour rather than an incident, which is worth knowing before an agent opens one.",
+      "docUrl": "https://aiven.io/docs/platform/concepts/maintenance-window",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "platform-agents",
+      "serviceTypes": [
+        "*"
+      ],
+      "kind": "managed automatically",
+      "title": "Aiven software runs on the nodes alongside yours",
+      "detail": "Monitoring, backup and orchestration processes run on every service, hold their own database connections, and appear in statistics as sessions and queries nobody in your team wrote. Customers are not generally aware of this, so the unexplained connection is usually ours.",
+      "docUrl": "https://aiven.io/docs/platform/concepts/service-power-cycle",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "rebuild-not-edit",
+      "serviceTypes": [
+        "*"
+      ],
+      "kind": "differs from upstream",
+      "title": "Many changes replace the nodes rather than modify them",
+      "detail": "A plan change or a maintenance update generally builds new nodes and moves service to them, so node names change and anything pinned to a host or an IP breaks. This is why a plan change on a single-node service is downtime rather than a resize.",
+      "docUrl": "https://aiven.io/docs/platform/howto/scale-services",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "disk-without-plan",
+      "serviceTypes": [
+        "*"
+      ],
+      "kind": "differs from upstream",
+      "title": "Disk can sometimes grow without a plan change",
+      "detail": "On plans that support it, storage is added to the running service, which makes \"we are running out of disk\" a smaller problem here than the upstream instinct of provisioning a bigger machine. Whether this service is one of them is in the plan block.",
+      "docUrl": "https://aiven.io/docs/platform/concepts/dynamic-disk-sizing",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "backup-is-fork",
+      "serviceTypes": [
+        "*"
+      ],
+      "kind": "differs from upstream",
+      "title": "Restoring means forking to a new service",
+      "detail": "Backups are not restored in place. The supported path creates a new service at a point in time, which you then move traffic to — so a restore is a migration with a connection-string change, not an afternoon of pg_restore. Worth knowing before promising a rollback that assumes otherwise.",
+      "docUrl": "https://aiven.io/docs/platform/howto/console-fork-service",
+      "reviewed": "2026-09-15"
+    }
+  ],
+  "summary": "os-ddec4cf-dhtest is OpenSearch, currently POWEROFF, low in test. Idle OpenSearch test cluster. Nothing under it is catalogued, so there is no data inventory to reason about. Nothing downstream depends on it. 3 findings, worst: Open to 0.0.0.0/0 the moment it powers on (caution). Unattended, an agent may read metadata, read metrics, apply pending maintenance, restart and power off. A change freeze is in force: Data Innovation Summit. The project is on stage, so nothing changes unattended, however good the reason. Policy basis: derived from low criticality in a test environment.",
+  "data": {
+    "datasets": 0,
+    "columns": 0,
+    "assets": [],
+    "note": "Descriptions and tags as catalogued. Edits made in the browser live in that browser and are not in this file."
+  },
+  "lineage": {
+    "upstreamServices": [],
+    "downstreamServices": [],
+    "reachesEventually": [],
+    "inbound": [],
+    "outbound": [],
+    "internalHops": 0,
+    "integrations": [],
+    "note": "Lineage is catalogued from connector configuration and schemas, not traced at runtime. A `dataset` confidence means the tables are known to be connected without the column mapping being read."
+  },
+  "boundaries": {
+    "doNotRead": [],
+    "handleCarefully": [],
+    "note": "These come from the data, and apply to reads. What may be done to the service itself is in `policy`, and an operation absent from all three of its lists is one nobody has considered: treat it as forbidden."
+  }
+}

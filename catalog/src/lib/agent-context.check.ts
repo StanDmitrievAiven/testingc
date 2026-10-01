@@ -5,8 +5,11 @@
 // default, and the runbook wiring. If a finding can appear with no play attached, or a policy can
 // default to permissive, that is the bug worth catching here rather than on stage.
 import { agentPolicies, runbooks } from '../data/agent.ts'
-import { metricReadings, metricsCapturedAt } from '../data/operations.ts'
+import { classificationFor, classifications } from '../data/classification.ts'
+import { objectiveFor, objectives } from '../data/objectives.ts'
+import { metricReadings, metricsCapturedAt, operationsCapturedAt } from '../data/operations.ts'
 import {
+  capabilitiesFor,
   contactsFor,
   coveredServices,
   diskTrend,
@@ -18,6 +21,7 @@ import {
   serviceContext,
   stalenessHours,
 } from './agent-context.ts'
+import { serviceById } from './catalog.ts'
 
 function assert(ok: boolean, what: string): void {
   if (!ok) throw new Error(`agent-context: ${what}`)
@@ -89,6 +93,75 @@ assert(
   findingsFor('kafka-1b5cb1e7').every((f) => f.kind !== 'single-node'),
   'kafka has three nodes, so the single-node finding must not fire',
 )
+
+// Objectives: every number a finding fires on is declared, and the one in force is the one quoted.
+assert(objectiveFor('disk-headroom', 'kafka')?.target === 45, 'kafka overrides the fleet disk objective')
+assert(objectiveFor('disk-headroom', 'pg')?.target === 90, 'pg takes the fleet default')
+assert(objectiveFor('disk-headroom', undefined)?.appliesTo.includes('*'), 'an unknown type falls back to the default')
+for (const objective of objectives) {
+  assert(objective.rationale.length > 60, `${objective.id} must say why this number and not another`)
+  assert(objective.owner.length > 0, `${objective.id} needs an owner`)
+  assert(objective.reviewed.length === 10, `${objective.id} needs a review date, or it decays into a constant`)
+}
+for (const serviceId of coveredServices()) {
+  const type = serviceById(serviceId)?.type
+  for (const finding of findingsFor(serviceId)) {
+    if (finding.objective === undefined) continue
+    const objective = objectiveFor(finding.objective, type)
+    assert(objective !== undefined, `${finding.kind} cites ${finding.objective}, which nobody declared`)
+    assert(
+      finding.detail.includes(String(objective!.target)),
+      `${finding.kind} must quote the target it was measured against, so the threshold can be argued with`,
+    )
+  }
+}
+assert(
+  findingsFor('crm-pg').find((f) => f.kind === 'disk-filling')?.objective === 'disk-headroom',
+  'the disk finding must name the objective it breached rather than a number in the code',
+)
+
+// The stopped test cluster. A finding has to still be true on a service that is switched off.
+const stopped = findingsFor('os-ddec4cf-dhtest')
+assert(stopped.some((f) => f.kind === 'powered-off'), 'a service stopped for a month must be reported')
+assert(
+  stopped.find((f) => f.kind === 'open-to-internet')?.severity === 'caution',
+  'an open filter on a stopped service is dormant, and calling it a live danger is a false claim',
+)
+assert(!stopped.some((f) => f.kind === 'single-node'), 'a stopped service cannot suffer a restart outage')
+assert(!stopped.some((f) => f.kind === 'backup-stale'), 'a stopped service has nothing to back up, so the gap is expected')
+assert(
+  findingsFor('pg-37c7de3b').find((f) => f.kind === 'open-to-internet')?.severity === 'danger',
+  'a running service open to the world is still a danger',
+)
+
+// A setting that is invisible on one service and obvious across a fleet.
+for (const id of ['marmot-pg', 'trino-hub-pg']) {
+  assert(
+    findingsFor(id).some((f) => f.kind === 'weak-password-encryption'),
+    `${id} stores passwords as md5 and must say so`,
+  )
+}
+
+// The second capture carries its own timestamp rather than borrowing the first one's freshness.
+assert(
+  findingsFor('marmot-pg').every((f) => f.source !== 'aiven_service_get' || f.capturedAt === '2026-09-15T08:20:00Z'),
+  'facts read on the 15th must not claim the file-level capture time',
+)
+assert(
+  findingsFor('pg-37c7de3b').every((f) => f.source !== 'aiven_service_get' || f.capturedAt === operationsCapturedAt),
+  'the original captures keep their own, older timestamp',
+)
+
+// Capabilities come from what was captured, and say nothing where nothing was captured.
+assert(capabilitiesFor('crm-pg')?.maxConnections === 25, 'the connection limit is a captured fact')
+assert(capabilitiesFor('kafka-1b5cb1e7')?.failoverAvailable === true, 'three brokers can fail over')
+assert(capabilitiesFor('crm-pg')?.failoverAvailable === false, 'one node cannot')
+assert(capabilitiesFor('crm-pg')?.canAddDisk === false, 'hobbyist cannot buy disk on its own')
+assert(
+  capabilitiesFor('kafka-1b5cb1e7')?.canAddDisk === undefined,
+  'no kafka rung was priced, and not knowing must not be reported as no',
+)
+assert(capabilitiesFor('analytics-agent-pg') === undefined, 'a service with no facts claims no capabilities')
 // Worst first, so a reader who stops after one line has read the right one.
 for (const serviceId of coveredServices()) {
   const severities = findingsFor(serviceId).map((f) => ({ danger: 0, caution: 1, info: 2 })[f.severity])
@@ -119,12 +192,15 @@ const kinds = [
   'pending-maintenance',
   'connector-down',
   'lag-against-retention',
+  'weak-password-encryption',
+  'powered-off',
+  'backup-stale',
 ]
 for (const book of runbooks) {
   assert(kinds.includes(book.forFinding), `runbook "${book.title}" points at unknown finding ${book.forFinding}`)
 }
-// The two plays for trouble nobody has yet are the point of writing plays in advance.
-for (const kind of ['connector-down', 'lag-against-retention']) {
+// The plays for trouble nobody has yet are the point of writing plays in advance.
+for (const kind of ['connector-down', 'lag-against-retention', 'backup-stale']) {
   assert(
     runbooks.some((r) => r.forFinding === kind),
     `${kind} needs a runbook before the incident, not during it`,
@@ -135,12 +211,57 @@ for (const kind of ['connector-down', 'lag-against-retention']) {
   )
 }
 
-// Policy fails closed: a service nobody has written a policy for allows nothing but reading.
-const unwritten = policyFor('marmot-pg')
-assert(!agentPolicies.some((p) => p.serviceId === 'marmot-pg'), 'marmot-pg is the unwritten case this checks')
+// Policy fails closed: a service nobody has classified or written a policy for allows only reading.
+const unwritten = policyFor('analytics-agent-pg')
+assert(
+  !agentPolicies.some((p) => p.serviceId === 'analytics-agent-pg') && classificationFor('analytics-agent-pg') === undefined,
+  'analytics-agent-pg is the unclassified, unwritten case this checks',
+)
 assert(unwritten.needsApproval.length === 0, 'an unwritten policy must not offer an approval path')
 assert(unwritten.forbidden.includes('everything else'), 'an unwritten policy must forbid everything else')
 assert(unwritten.allowed.join() === 'read metadata', 'an unwritten policy must allow reading only')
+assert(unwritten.basis.includes('unclassified'), 'the document must say the policy came from nobody having decided')
+
+// Classification is what decides the rest, so the three routes into a policy are pinned apart.
+assert(
+  policyFor('pg-37c7de3b').basis.startsWith('written for this service'),
+  'a hand-written policy must override criticality and say that it did',
+)
+assert(policyFor('marmot-pg').basis.includes('standard'), 'marmot-pg has no written policy, so it derives from standard')
+assert(
+  policyFor('marmot-pg').allowed.includes('apply pending maintenance'),
+  'standard services apply their own maintenance, since Aiven applies it at the deadline anyway',
+)
+assert(
+  !policyFor('marmot-pg').allowed.includes('restart'),
+  'standard is not permission to restart unattended',
+)
+// The whole point of classifying: the same operation sits in different columns as the cost rises.
+assert(
+  policyFor('os-ddec4cf-dhtest').allowed.includes('restart'),
+  'a corroborated test service may be restarted unattended, or the classification changes nothing',
+)
+assert(
+  policyFor('os-ddec4cf-dhtest').needsApproval.includes('delete the service'),
+  'deletion waits for a human even at low criticality, because the classification is inferred',
+)
+for (const criticality of ['critical', 'important', 'standard'] as const) {
+  const service = classifications.find((c) => c.criticality === criticality)
+  if (!service) continue
+  assert(
+    !policyFor(service.serviceId).allowed.includes('restart'),
+    `${criticality} must not allow an unattended restart`,
+  )
+}
+for (const entry of classifications) {
+  assert(entry.provenance === 'inferred', 'nothing in this project declares an environment, so nothing may claim to')
+  assert(entry.evidence.length > 60, `${entry.serviceId} must say what its classification rests on`)
+}
+assert(
+  classificationFor('os-ddec4cf-dhtest')?.evidence.includes('powered off'),
+  'a name alone must never classify a service: the test cluster needs its corroborating evidence',
+)
+
 for (const policy of agentPolicies) {
   assert(policy.because.length > 40, `${policy.serviceId} policy must say why, not just what`)
   const overlap = policy.allowed.filter((a) => policy.forbidden.includes(a) || policy.needsApproval.includes(a))
@@ -175,8 +296,11 @@ for (const serviceId of coveredServices()) {
     assert(!contact.email.startsWith('Aiven'), 'Aiven Automation is not somebody to page')
   }
 }
+// Under Node the edit store is empty, so no service has a declared owner here and the sentence
+// has to say so rather than presenting the observed contacts as the answer.
 assert(
-  serviceContext('crm-pg')?.ownership.includes('Observed, not declared'),
+  serviceContext('crm-pg')?.owners.length === 0 &&
+    serviceContext('crm-pg')?.ownership.includes('observed rather than responsible'),
   'the document must not pass observed contacts off as declared ownership',
 )
 
@@ -190,7 +314,7 @@ assert(
   'every document states the capture it rests on',
 )
 assert(serviceContext('nonexistent-service') === undefined, 'an unknown service has no document')
-assert(coveredServices().length === 5, `expected 5 covered services, got ${coveredServices().length}`)
+assert(coveredServices().length === 8, `expected 8 covered services, got ${coveredServices().length}`)
 
 // The panel offers a JSON link on every service page, so every service needs a document behind it.
 assert(

@@ -31,7 +31,9 @@ export function ResourceList({
   const available = new Set(items.map((item) => item.type))
 
   const filtered = useMemo(() => {
-    const fromSearch = query.trim() ? searchAll(query).services : items
+    // This list shows services only, so the hits collapse back to their items. The matched field is
+    // what the command palette needs; here the list is already scoped to one kind of thing.
+    const fromSearch = query.trim() ? searchAll(query).services.map((hit) => hit.item) : items
     const allowed = new Set(items.map((item) => item.id))
     return fromSearch.filter((item) => {
       if (!allowed.has(item.id)) return false

@@ -18,10 +18,22 @@ import type {
   QueryStat,
   ServiceEvent,
   ServiceFacts,
+  StatementCoverage,
   TopicHealth,
+  TopicSerialization,
 } from '../types.ts'
 
 export const operationsCapturedAt = '2026-09-07T07:20:00Z'
+
+/**
+ * Authored for the demo, because every real change in the capture is either gated or predates the
+ * gate, so the "outside the gate" state would never appear. The type and summary are Aiven's own
+ * (`service_update_allowed_ip_addresses`: "Changed allowed IP addresses"); the occurrence is made up.
+ * Kept apart from `serviceEvents` on purpose: contacts and the agent context count those as facts.
+ */
+export const illustrativeEvents: ServiceEvent[] = [
+  { id: 'sample-crm-pg-ips', serviceId: 'crm-pg', at: '2026-09-04T11:40:00Z', actor: 'stan.dmitriev@aiven.io', type: 'service_update_allowed_ip_addresses', description: 'Changed allowed IP addresses', sample: true },
+]
 
 /**
  * Aiven's account of what happened to each service, which is a different question from the purpose
@@ -328,6 +340,66 @@ export const serviceFacts: ServiceFacts[] = [
     backupCount: 2,
     pendingUpdates: [],
   },
+  // A second capture, a week after the four above, to give the fleet view more than one corner of
+  // the project to rank. Each entry carries its own `capturedAt` rather than inheriting the file's:
+  // borrowing the older timestamp would make these look a week staler than they are, and borrowing
+  // the newer one would make the originals look fresher. Both are the same lie in opposite directions.
+  {
+    serviceId: 'marmot-pg',
+    planPriceUsdPerHour: 0.034,
+    nodeCount: 1,
+    maintenanceDay: 'saturday',
+    maintenanceTime: '06:54:35',
+    terminationProtection: false,
+    openToInternet: true,
+    techEmails: [],
+    diskMb: 8192,
+    maxConnections: 25,
+    latestBackupAt: '2026-09-14T10:08:05Z',
+    backupCount: 2,
+    pendingUpdates: [
+      { description: 'PostgreSQL Anonymizer version 3.1.3 is available.', startAt: '2026-09-14T08:35:00Z' },
+    ],
+    passwordEncryption: 'md5',
+    capturedAt: '2026-09-15T08:20:00Z',
+  },
+  {
+    serviceId: 'trino-hub-pg',
+    planPriceUsdPerHour: 0.151,
+    nodeCount: 1,
+    maintenanceDay: 'sunday',
+    maintenanceTime: '06:34:08',
+    terminationProtection: false,
+    openToInternet: true,
+    techEmails: [],
+    diskMb: 81920,
+    maxConnections: 100,
+    latestBackupAt: '2026-09-14T18:18:07Z',
+    backupCount: 3,
+    pendingUpdates: [
+      { description: 'PostgreSQL Anonymizer version 3.1.3 is available.', startAt: '2026-09-14T08:35:00Z' },
+    ],
+    passwordEncryption: 'md5',
+    capturedAt: '2026-09-15T08:20:00Z',
+  },
+  {
+    // Powered off since 11 August and still reachable from anywhere, which is the combination worth
+    // seeing on a fleet board: nothing is running, so nothing raises an alert, and the backups have
+    // been standing still for a month because a stopped service has nothing to back up.
+    serviceId: 'os-ddec4cf-dhtest',
+    planPriceUsdPerHour: 0.123,
+    nodeCount: 1,
+    maintenanceDay: 'sunday',
+    maintenanceTime: '10:23:34',
+    terminationProtection: false,
+    openToInternet: true,
+    techEmails: [],
+    diskMb: 81920,
+    latestBackupAt: '2026-08-11T07:09:56Z',
+    backupCount: 28,
+    pendingUpdates: [],
+    capturedAt: '2026-09-15T08:20:00Z',
+  },
 ]
 
 /**
@@ -384,6 +456,125 @@ export const connectorStatuses: ConnectorStatus[] = [
  * size and node count are the ones observed on the services already on each plan, not the whole
  * catalogue entry, so nothing is claimed that was not seen.
  */
+/**
+ * Every statement `pg_stat_statements` held for these two services, read in full rather than
+ * sampled, and reduced to the catalogued tables each one names.
+ *
+ * The full read is the point. `queryStats` above keeps the fourteen slowest statements because that
+ * is what a workload view wants; asking whether a table is used needs the opposite — completeness,
+ * not interest — because one unread statement is the difference between a table nobody queries and
+ * a table queried by the one job that matters.
+ *
+ * Read with `aiven_pg_service_query_statistics`. The window is whatever has accumulated since the
+ * counters were last reset, which Postgres does not report, so this says what was seen and not
+ * over how long.
+ */
+export const statementCoverage: StatementCoverage[] = [
+  {
+    serviceId: 'pg-37c7de3b',
+    statements: 99,
+    tablesSeen: ['campaigns', 'customers', 'order_items', 'orders', 'products'],
+    capturedAt: '2026-09-15T11:05:00Z',
+  },
+  {
+    serviceId: 'marmot-pg',
+    statements: 84,
+    tablesSeen: [
+      'api_keys',
+      'asset_owners',
+      'asset_rule_memberships',
+      'asset_rules',
+      'asset_statistics',
+      'asset_terms',
+      'assets',
+      'data_product_owners',
+      'data_products',
+      'doc_images',
+      'doc_pages',
+      'glossary_terms',
+      'ingestion_job_runs',
+      'ingestion_schedules',
+      'lineage_edges',
+      'lookup_counters',
+      'metrics_timeseries',
+      'notifications',
+      'permissions',
+      'role_permissions',
+      'roles',
+      'run_checkpoints',
+      'run_entities',
+      'runs',
+      'schema_version',
+      'search_index',
+      'summary_counts',
+      'system_secrets',
+      'team_members',
+      'teams',
+      'telemetry_install',
+      'user_identities',
+      'user_roles',
+      'users',
+    ],
+    capturedAt: '2026-09-15T11:05:00Z',
+  },
+]
+
+/**
+ * How each webshop topic is encoded, from `aiven_kafka_schema_registry_subjects` and, for orders,
+ * the schema itself.
+ *
+ * The envelope fields are the useful part and are not guessable: Debezium adds `__deleted`, `__op`
+ * and `__source_ts_ms` to every record, so a consumer written from the source table's column list
+ * will meet three fields nobody mentioned, and a row marked deleted that is still present.
+ *
+ * Only the orders subject was read in full. The other three are listed as subjects, which is a fact
+ * about the registry, and their versions are left absent rather than assumed to match.
+ */
+export const topicSerialization: TopicSerialization[] = [
+  {
+    assetId: 'kafka.webshop.public.orders',
+    format: 'Avro',
+    keySubject: 'webshop.public.orders-key',
+    valueSubject: 'webshop.public.orders-value',
+    subjectStrategy: 'TopicNameStrategy — the subject is the topic name with -key or -value appended',
+    registry: 'Karapace on kafka-1b5cb1e7, not a separate Confluent cluster',
+    schemaId: 8,
+    schemaVersion: 1,
+    envelopeFields: ['__deleted', '__op', '__source_ts_ms'],
+    capturedAt: '2026-09-15T12:10:00Z',
+  },
+  {
+    assetId: 'kafka.webshop.public.customers',
+    format: 'Avro',
+    keySubject: 'webshop.public.customers-key',
+    valueSubject: 'webshop.public.customers-value',
+    subjectStrategy: 'TopicNameStrategy — the subject is the topic name with -key or -value appended',
+    registry: 'Karapace on kafka-1b5cb1e7, not a separate Confluent cluster',
+    envelopeFields: ['__deleted', '__op', '__source_ts_ms'],
+    capturedAt: '2026-09-15T12:10:00Z',
+  },
+  {
+    assetId: 'kafka.webshop.public.products',
+    format: 'Avro',
+    keySubject: 'webshop.public.products-key',
+    valueSubject: 'webshop.public.products-value',
+    subjectStrategy: 'TopicNameStrategy — the subject is the topic name with -key or -value appended',
+    registry: 'Karapace on kafka-1b5cb1e7, not a separate Confluent cluster',
+    envelopeFields: ['__deleted', '__op', '__source_ts_ms'],
+    capturedAt: '2026-09-15T12:10:00Z',
+  },
+  {
+    assetId: 'kafka.webshop.public.order_items',
+    format: 'Avro',
+    keySubject: 'webshop.public.order_items-key',
+    valueSubject: 'webshop.public.order_items-value',
+    subjectStrategy: 'TopicNameStrategy — the subject is the topic name with -key or -value appended',
+    registry: 'Karapace on kafka-1b5cb1e7, not a separate Confluent cluster',
+    envelopeFields: ['__deleted', '__op', '__source_ts_ms'],
+    capturedAt: '2026-09-15T12:10:00Z',
+  },
+]
+
 export const planLadder: PlanRung[] = [
   { serviceType: 'pg', plan: 'hobbyist', cloud: 'aws-eu-west-1', usdPerHour: 0.034, diskGb: 8 },
   {

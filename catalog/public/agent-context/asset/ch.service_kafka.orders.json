@@ -1,0 +1,205 @@
+{
+  "assetId": "ch.service_kafka.orders",
+  "name": "orders",
+  "qualifiedName": "clickhouse-2a6274d2.service_kafka-1b5cb1e7.orders",
+  "kind": "clickhouse_table",
+  "serviceId": "clickhouse-2a6274d2",
+  "serviceName": "clickhouse-2a6274d2",
+  "serviceType": "ClickHouse",
+  "description": "ClickHouse Kafka engine table for order CDC.",
+  "descriptionReview": {
+    "author": "the catalog snapshot",
+    "at": "2026-09-15",
+    "state": "accepted",
+    "sources": [
+      "this catalog, authored when the project was walked"
+    ]
+  },
+  "owners": [],
+  "tags": [
+    {
+      "tag": "cdc",
+      "meaning": "Captured by change data capture, so every row change is replicated downstream."
+    },
+    {
+      "tag": "avro",
+      "meaning": "Encoded as Avro against a registry schema; a reader needs that schema to decode it."
+    }
+  ],
+  "columns": [
+    {
+      "name": "id",
+      "type": "Int64",
+      "nullable": false,
+      "note": "Surrogate key; order_items.order_id points here"
+    },
+    {
+      "name": "customer_id",
+      "type": "Int64",
+      "nullable": false,
+      "note": "FK to customers.id"
+    },
+    {
+      "name": "status",
+      "type": "String",
+      "nullable": false,
+      "note": "Lifecycle state, starts at pending and is advanced in place"
+    },
+    {
+      "name": "total",
+      "type": "String",
+      "nullable": false,
+      "note": "Order value, rewritten once the line items exist"
+    },
+    {
+      "name": "region",
+      "type": "String",
+      "nullable": false,
+      "note": "Copied from the customer's region so reporting need not join"
+    },
+    {
+      "name": "created_at",
+      "type": "String",
+      "nullable": false,
+      "note": "Insert time, set by the database"
+    },
+    {
+      "name": "updated_at",
+      "type": "String",
+      "nullable": false,
+      "note": "Bumped by every status and total write"
+    },
+    {
+      "name": "__op",
+      "type": "String",
+      "nullable": true,
+      "note": "Debezium op (c/u/d/r)"
+    },
+    {
+      "name": "__source_ts_ms",
+      "type": "Int64",
+      "nullable": true,
+      "note": "Source commit timestamp"
+    },
+    {
+      "name": "__deleted",
+      "type": "String",
+      "nullable": true,
+      "note": "ExtractNewRecordState flag"
+    }
+  ],
+  "facts": [
+    {
+      "what": "Columns",
+      "value": "10",
+      "origin": "captured",
+      "source": "this catalog, from the service schema"
+    },
+    {
+      "what": "Last write",
+      "value": "Unknown. No tool read for this project reports a last-write or last-produce time.",
+      "origin": "derived",
+      "source": "the set of tools read for this project"
+    }
+  ],
+  "findings": [],
+  "deletion": {
+    "assetId": "ch.service_kafka.orders",
+    "verdict": "unsafe",
+    "because": "Something is using it: 1 catalogued downstream reader. Deleting it breaks that, and the break is not reversible by re-creating an empty one.",
+    "evidence": [
+      {
+        "what": "Downstream readers",
+        "found": "1 catalogued hop out: trino-hub.summit_clickhouse",
+        "source": "this catalog, from connector configuration and schemas"
+      },
+      {
+        "what": "Usage telemetry",
+        "found": "Nothing in this snapshot reports reads of a clickhouse table",
+        "source": "—"
+      },
+      {
+        "what": "Last write",
+        "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+        "source": "—"
+      }
+    ]
+  },
+  "diagnosis": {
+    "assetId": "ch.service_kafka.orders",
+    "name": "clickhouse-2a6274d2.service_kafka-1b5cb1e7.orders",
+    "chain": [
+      {
+        "assetId": "kafka.webshop.public.orders",
+        "name": "kafka-1b5cb1e7.webshop.public.orders",
+        "serviceId": "kafka-1b5cb1e7",
+        "serviceName": "kafka-1b5cb1e7",
+        "distance": 1,
+        "via": "clickhouse_kafka · AvroConfluent",
+        "delay": {
+          "behindRecords": 5,
+          "retainedRecords": 1342101,
+          "measures": "ch-webshop-orders-avro-v1 against what the topic still keeps, read from aiven_kafka_topic_get"
+        },
+        "health": "ok",
+        "why": "Nothing captured here explains a data problem.",
+        "findings": []
+      },
+      {
+        "assetId": "connect.webshop-pg-cdc",
+        "name": "kafkaconnect-30e121dd.webshop-pg-cdc",
+        "serviceId": "kafkaconnect-30e121dd",
+        "serviceName": "kafkaconnect-30e121dd",
+        "distance": 2,
+        "via": "webshop-pg-cdc · Debezium pgoutput",
+        "health": "ok",
+        "why": "webshop-pg-cdc is RUNNING with 1 of 1 tasks running.",
+        "findings": []
+      },
+      {
+        "assetId": "pg.public.orders",
+        "name": "pg-37c7de3b.public.orders",
+        "serviceId": "pg-37c7de3b",
+        "serviceName": "pg-37c7de3b",
+        "distance": 2,
+        "via": "webshop-pg-cdc · Debezium pgoutput",
+        "health": "ok",
+        "why": "Nothing captured here explains a data problem.",
+        "findings": []
+      },
+      {
+        "assetId": "app.webshop-simulator",
+        "name": "application.webshop-simulator",
+        "serviceId": "webshop-simulator",
+        "serviceName": "webshop-simulator",
+        "distance": 3,
+        "via": "application_service_credential",
+        "health": "unknown",
+        "why": "No facts or metrics were captured for this service, so it cannot be cleared or blamed.",
+        "findings": []
+      }
+    ],
+    "verdict": "No hop upstream of clickhouse-2a6274d2.service_kafka-1b5cb1e7.orders explains it. Checked 4 hops upstream across 4 services. 1 of them could not be assessed at all (webshop-simulator), so this is \"nothing found\" rather than \"nothing wrong\". Look at whatever reads this, or at the query producing the symptom.",
+    "freshness": "1 of 4 hops report a delay. The largest is kafka-1b5cb1e7.webshop.public.orders, 5 records behind out of 1,342,101 retained (ch-webshop-orders-avro-v1 against what the topic still keeps, read from aiven_kafka_topic_get). That is a position, not a duration: nothing here times a hop, so these cannot be added into an end-to-end age.",
+    "boundary": "The walk stops where Aiven can see: the last hop inside the platform. Whatever reads the end of this chain — a dashboard, a job, somebody's notebook — is invisible here, and is where a symptom nothing upstream explains usually turns out to live."
+  },
+  "policy": {
+    "serviceId": "clickhouse-2a6274d2",
+    "allowed": [
+      "read metadata",
+      "read metrics"
+    ],
+    "needsApproval": [
+      "apply pending maintenance",
+      "restart",
+      "change plan"
+    ],
+    "forbidden": [
+      "delete the service",
+      "drop a table"
+    ],
+    "because": "Single node with three platform updates already queued against deadlines, so a restart here competes with maintenance Aiven will run anyway.",
+    "basis": "written for this service, overriding what its criticality would give it"
+  },
+  "note": "Descriptions, tags and owners are editable in the browser, and those edits live in that browser rather than in this file. Everything marked captured names the Aiven tool it came from and when it was read."
+}

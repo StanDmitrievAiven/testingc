@@ -55,14 +55,39 @@ edits.setColumnTags('pg.public.customers', 'email', ['pii'])
 assert.equal(edits.columnDescription('pg.public.customers', 'email'), 'Login address.')
 assert.deepEqual(edits.columnTagsFor('pg.public.customers', 'email'), ['pii'])
 
+// Owners are keyed like tags, so a service, a schema folder and a table each hold their own.
+assert.deepEqual(edits.ownersFor('marmot-pg'), [], 'nobody owns anything until somebody says so')
+edits.setOwners('marmot-pg', [{ name: 'Data Platform', kind: 'group' }])
+edits.setOwners('marmot-pg:public', [{ name: 'stan.dmitriev@aiven.io', kind: 'person' }])
+assert.deepEqual(edits.ownersFor('marmot-pg'), [{ name: 'Data Platform', kind: 'group' }])
+assert.deepEqual(edits.ownersFor('marmot-pg:public'), [{ name: 'stan.dmitriev@aiven.io', kind: 'person' }])
+
+// Names keep their capitals, unlike tags, since "Data Platform" is a name and not an identifier.
+// Only the duplicate check folds case, so the same team typed twice lands once.
+edits.setOwners('crm-pg', [{ name: '  Payments  Team ', kind: 'group' }, { name: 'payments team', kind: 'person' }])
+assert.deepEqual(edits.ownersFor('crm-pg'), [{ name: 'Payments Team', kind: 'group' }], 'trimmed, kept, deduplicated')
+edits.setOwners('crm-pg', [{ name: '   ', kind: 'group' }, { name: 'Ops', kind: 'group' }])
+assert.deepEqual(edits.ownersFor('crm-pg'), [{ name: 'Ops', kind: 'group' }], 'a blank name is not an owner')
+edits.setOwners('crm-pg', [])
+assert.deepEqual(edits.ownersFor('crm-pg'), [], 'ownership can be taken back off')
+
 // What is actually persisted, and what happens when it comes back damaged or from an older version
-// of the app that never wrote tags.
+// of the app that never wrote tags or owners.
 const saved = JSON.parse(store['catalog-edits'])
-assert.deepEqual(Object.keys(saved).sort(), ['assets', 'columnTags', 'columns', 'tags'])
+assert.deepEqual(Object.keys(saved).sort(), [
+  'assets',
+  'columnTags',
+  'columns',
+  'grants',
+  'owners',
+  'provenance',
+  'tags',
+])
 
 store = { 'catalog-edits': JSON.stringify({ assets: { 'pg.public.orders': 'Older edit.' } }) }
 assert.equal(edits.assetDescription('pg.public.orders', 'fallback'), 'Older edit.', 'old edits survive')
 assert.deepEqual(edits.tagsFor('pg.public.orders', ['webshop']), ['webshop'], 'missing tags mean none stored')
+assert.deepEqual(edits.ownersFor('pg-37c7de3b'), [], 'a store written before owners existed still reads')
 
 store = { 'catalog-edits': 'not json at all' }
 assert.deepEqual(edits.tagsFor('anything', ['fallback']), ['fallback'], 'a damaged store reads as empty')

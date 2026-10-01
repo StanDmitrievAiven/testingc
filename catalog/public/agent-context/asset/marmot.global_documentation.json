@@ -1,0 +1,98 @@
+{
+  "assetId": "marmot.global_documentation",
+  "name": "global_documentation",
+  "qualifiedName": "marmot-pg.public.global_documentation",
+  "kind": "table",
+  "serviceId": "marmot-pg",
+  "serviceName": "marmot-pg",
+  "serviceType": "PostgreSQL",
+  "description": "Marmot catalog table global_documentation. No keys and no column list in this snapshot: nothing references it and it references nothing.",
+  "descriptionReview": {
+    "author": "the catalog snapshot",
+    "at": "2026-09-15",
+    "state": "accepted",
+    "sources": [
+      "this catalog, authored when the project was walked"
+    ]
+  },
+  "owners": [],
+  "tags": [
+    {
+      "tag": "marmot",
+      "meaning": "Belongs to the Marmot catalog service and its schema."
+    }
+  ],
+  "columns": [],
+  "facts": [
+    {
+      "what": "Columns",
+      "value": "0",
+      "origin": "captured",
+      "source": "this catalog, from the service schema"
+    },
+    {
+      "what": "Last write",
+      "value": "Unknown. No tool read for this project reports a last-write or last-produce time.",
+      "origin": "derived",
+      "source": "the set of tools read for this project"
+    }
+  ],
+  "findings": [
+    {
+      "kind": "dead-workflow",
+      "severity": "info",
+      "title": "Nothing that can be seen from here reads this",
+      "detail": "Nothing catalogued reads it, nothing references it, and none of the statements captured on this service name it. That is an argument for asking whoever owns it, not for deleting it: no last-write time exists anywhere in this snapshot, and a consumer connecting with a plain connection string leaves no trace here at all.",
+      "source": "pg_stat_statements read in full, this catalog"
+    }
+  ],
+  "deletion": {
+    "assetId": "marmot.global_documentation",
+    "verdict": "no sign of use",
+    "because": "Nothing catalogued reads it, nothing references it, and none of the statements captured on this service name it. That is an argument for asking whoever owns it, not for deleting it: no last-write time exists anywhere in this snapshot, and a consumer connecting with a plain connection string leaves no trace here at all.",
+    "evidence": [
+      {
+        "what": "Downstream readers",
+        "found": "None catalogued",
+        "source": "this catalog, from connector configuration and schemas"
+      },
+      {
+        "what": "Recorded statements",
+        "found": "None of the 84 statements recorded on this service name it",
+        "source": "pg_stat_statements, all 84 read 2026-09-15"
+      },
+      {
+        "what": "Last write",
+        "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+        "source": "—"
+      }
+    ]
+  },
+  "diagnosis": {
+    "assetId": "marmot.global_documentation",
+    "name": "marmot-pg.public.global_documentation",
+    "chain": [],
+    "verdict": "Nothing feeds marmot-pg.public.global_documentation in this catalog, so there is no upstream chain to blame. If it looks wrong, the cause is in whatever writes it or in the thing reading it.",
+    "freshness": "No hop in this chain measures its own delay, so there is no end-to-end figure. Consumer lag is the only latency this project captures, and there is no Kafka hop here to read it from.",
+    "boundary": "The walk stops where Aiven can see: the last hop inside the platform. Whatever reads the end of this chain — a dashboard, a job, somebody's notebook — is invisible here, and is where a symptom nothing upstream explains usually turns out to live."
+  },
+  "policy": {
+    "serviceId": "marmot-pg",
+    "allowed": [
+      "read metadata",
+      "read metrics",
+      "apply pending maintenance"
+    ],
+    "needsApproval": [
+      "restart",
+      "change plan",
+      "change ip filter"
+    ],
+    "forbidden": [
+      "delete the service"
+    ],
+    "because": "Standard means an outage degrades a tool rather than a pipeline. Maintenance can go in unattended, since the alternative is Aiven applying it at its own deadline anyway.",
+    "basis": "derived from standard criticality in a production environment"
+  },
+  "note": "Descriptions, tags and owners are editable in the browser, and those edits live in that browser rather than in this file. Everything marked captured names the Aiven tool it came from and when it was read."
+}

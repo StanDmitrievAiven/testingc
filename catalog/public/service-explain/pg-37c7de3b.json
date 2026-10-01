@@ -1,0 +1,1491 @@
+{
+  "serviceId": "pg-37c7de3b",
+  "name": "pg-37c7de3b",
+  "type": "pg",
+  "coverage": {
+    "facts": true,
+    "metrics": true,
+    "classified": true,
+    "policy": true,
+    "contact": true
+  },
+  "classification": {
+    "serviceId": "pg-37c7de3b",
+    "environment": "production",
+    "criticality": "critical",
+    "provenance": "inferred",
+    "evidence": "The webshop system of record, and the head of the change data capture chain: the connector reads its replication slot, so every downstream copy in Kafka, ClickHouse and Trino descends from this one database. Losing it loses data nothing else holds."
+  },
+  "objectives": [
+    {
+      "id": "disk-headroom",
+      "appliesTo": [
+        "*"
+      ],
+      "title": "At least a quarter of a year of disk runway",
+      "target": 90,
+      "unit": "days to full",
+      "breach": 30,
+      "rationale": "Ninety days is long enough to plan a plan change into a maintenance window and get it approved. Thirty is short enough that the window is now, because on a single node growing the disk is an outage that has to be scheduled with whoever depends on it.",
+      "owner": "Data platform team",
+      "reviewed": "2026-09-08"
+    },
+    {
+      "id": "evidence-freshness",
+      "appliesTo": [
+        "*"
+      ],
+      "title": "Evidence no more than a day behind the snapshot it arrived in",
+      "target": 24,
+      "unit": "hours behind capture",
+      "rationale": "A capacity claim is worth exactly as much as the reading under it. A day is the point where a trend computed from the numbers stops describing the service as it is now, and an agent acting on it is acting on history.",
+      "owner": "Data platform team",
+      "reviewed": "2026-09-08"
+    },
+    {
+      "id": "cpu-spike",
+      "appliesTo": [
+        "*"
+      ],
+      "title": "A peak worth naming",
+      "target": 50,
+      "unit": "percent peak",
+      "rationale": "Below half a core-equivalent nothing is worth reporting. This decides only whether a spike gets mentioned, never whether anything is done about it.",
+      "owner": "Data platform team",
+      "reviewed": "2026-09-08"
+    },
+    {
+      "id": "cpu-sustained",
+      "appliesTo": [
+        "*"
+      ],
+      "title": "Sustained load, as opposed to bursts",
+      "target": 20,
+      "unit": "percent average",
+      "rationale": "Under a fifth on average, a high peak is a query arriving rather than a service running out of room. The pair matters because resizing on a peak is the most common expensive mistake available here.",
+      "owner": "Data platform team",
+      "reviewed": "2026-09-08"
+    },
+    {
+      "id": "downsize-headroom",
+      "appliesTo": [
+        "*"
+      ],
+      "title": "A smaller plan must still leave a third of its disk free",
+      "target": 67,
+      "unit": "percent of the smaller disk in use",
+      "rationale": "The saving is worth having and the second migration is not. Moving down to a rung that is already two-thirds full buys a few pounds a month and a disk-full incident a quarter later, which costs more than the plan ever saved. A third free is the margin that makes the move a decision rather than a bet on growth stopping.",
+      "owner": "Data platform team",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "downsize-utilisation",
+      "appliesTo": [
+        "*"
+      ],
+      "title": "Peaks well inside the plan before shrinking it",
+      "target": 60,
+      "unit": "percent peak of any resource",
+      "rationale": "Averages are what make downsizing look free: a service at five percent mean CPU that touches sixty-five under load will meet that load on a smaller plan too, and meet it worse. The peak is the number the plan actually has to survive, so it is the one that decides.",
+      "owner": "Data platform team",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "backup-freshness",
+      "appliesTo": [
+        "*"
+      ],
+      "title": "A restore point from within the last two days",
+      "target": 48,
+      "unit": "hours since the last backup",
+      "breach": 168,
+      "rationale": "Aiven takes daily backups, so two days allows one to fail without raising anything. A week means the restore point has quietly moved from yesterday to last Tuesday, which is only discovered at the worst possible moment.",
+      "owner": "Data platform team",
+      "reviewed": "2026-09-15"
+    }
+  ],
+  "capabilities": {
+    "nodes": 1,
+    "failoverAvailable": false,
+    "diskGb": 80,
+    "maxConnections": 100,
+    "canAddDisk": true,
+    "backupsRetained": 3,
+    "latestBackupAt": "2026-09-06T22:46:10Z",
+    "source": "aiven_service_get"
+  },
+  "captured": {
+    "catalog": "2026-09-07T07:20:00Z",
+    "serviceFacts": "2026-09-07T07:20:00Z",
+    "metrics": "2026-09-08T10:55:00Z",
+    "connectors": "2026-09-08T10:58:00Z",
+    "purposeLog": "2026-09-04T12:05:41.806Z",
+    "policy": "authored, not captured"
+  },
+  "policy": {
+    "serviceId": "pg-37c7de3b",
+    "allowed": [
+      "read metadata",
+      "read metrics",
+      "read query statistics"
+    ],
+    "needsApproval": [
+      "restart",
+      "change plan",
+      "change ip filter",
+      "terminate a session"
+    ],
+    "forbidden": [
+      "delete the service",
+      "drop the replication slot",
+      "disable backups"
+    ],
+    "because": "Single node holding the webshop source of truth, and the CDC connector reads its replication slot: dropping that slot loses changes that no downstream copy can reconstruct.",
+    "basis": "written for this service, overriding what its criticality would give it"
+  },
+  "freeze": {
+    "active": true,
+    "from": "2026-09-08T00:00:00Z",
+    "to": "2026-09-12T23:59:59Z",
+    "reason": "Data Innovation Summit. The project is on stage, so nothing changes unattended, however good the reason."
+  },
+  "owners": [],
+  "contacts": [
+    {
+      "email": "stan.dmitriev@aiven.io",
+      "why": "Technical contact on the service, and changed it 2 times in the event log"
+    },
+    {
+      "email": "ayesha.ahmad@aiven.io",
+      "why": "Last touched it: changed it 2 times in the event log"
+    }
+  ],
+  "ownership": "Nobody has been declared as an owner here, so the names below are observed rather than responsible: Marmot's asset_owners and teams tables are empty, and these are the people Aiven lists as contacts and the people the event log shows changing this service.",
+  "findings": [
+    {
+      "kind": "open-to-internet",
+      "severity": "danger",
+      "title": "Reachable from 0.0.0.0/0",
+      "detail": "The ip filter allows every address, so the only thing between this service and the internet is its password.",
+      "source": "aiven_service_get",
+      "capturedAt": "2026-09-07T07:20:00Z",
+      "docUrl": "https://aiven.io/docs/platform/howto/restrict-access",
+      "runbook": {
+        "forFinding": "open-to-internet",
+        "title": "Close the service to the open internet",
+        "docUrl": "https://aiven.io/docs/platform/howto/restrict-access",
+        "deviations": [
+          "pg-no-hba"
+        ],
+        "steps": [
+          "List what actually connects: the integrations in this catalog plus any application using a service credential.",
+          "Collect the egress ranges those clients come from. A guess here locks out production.",
+          "Replace the ip_filter with that list using aiven_service_update, leaving 0.0.0.0/0 out.",
+          "Keep your own access in the list, or you lock yourself out along with everyone else."
+        ],
+        "whileItRuns": "Established connections survive. New connections from anything outside the list are refused immediately, which is the whole point and also the risk.",
+        "takes": "Seconds to apply.",
+        "rollback": "Reversible: put the previous filter back with the same call.",
+        "verify": "Connect from an allowed address, then from one that is not. The second attempt must fail, or the filter did not take."
+      }
+    },
+    {
+      "kind": "single-node",
+      "severity": "caution",
+      "title": "One node, so a restart is an outage",
+      "detail": "There is nothing to fail over to. Every restart, plan change and platform update is downtime that has to be timed rather than absorbed.",
+      "source": "aiven_service_get",
+      "capturedAt": "2026-09-07T07:20:00Z",
+      "docUrl": "https://aiven.io/docs/products/postgresql/concepts/high-availability",
+      "runbook": {
+        "forFinding": "single-node",
+        "title": "Restart a service that has no second node",
+        "docUrl": "https://aiven.io/docs/products/postgresql/concepts/high-availability",
+        "deviations": [
+          "rebuild-not-edit"
+        ],
+        "steps": [
+          "Treat this as planned downtime and announce it, because that is what it is.",
+          "Check no platform maintenance is already in flight for the same service.",
+          "Prefer the existing maintenance window over a restart of your own.",
+          "Restart, then watch the dependents rather than the service: it comes back before they do."
+        ],
+        "whileItRuns": "A total outage for the length of the restart. Change data capture stops and resumes from its replication slot; consumers downstream fall behind rather than lose data.",
+        "takes": "A few minutes, most of it the service coming back up.",
+        "rollback": "None. A restart cannot be undone, only waited out.",
+        "verify": "Service state RUNNING, the CDC connector back to RUNNING, and consumer lag falling across two readings rather than one."
+      }
+    },
+    {
+      "kind": "no-termination-protection",
+      "severity": "info",
+      "title": "Termination protection is off",
+      "detail": "Nothing stands between a deletion call and this service, which is a cheap gap to close.",
+      "source": "aiven_service_get",
+      "capturedAt": "2026-09-07T07:20:00Z",
+      "docUrl": "https://aiven.io/docs/tools/api",
+      "runbook": {
+        "forFinding": "no-termination-protection",
+        "title": "Turn on termination protection",
+        "steps": [
+          "Set termination protection with aiven_service_update."
+        ],
+        "whileItRuns": "Nothing. It is a configuration flag, with no restart.",
+        "takes": "Seconds.",
+        "rollback": "Reversible with the same call, which is exactly why it is worth having on.",
+        "verify": "Read the service back and confirm the flag is set."
+      }
+    }
+  ],
+  "readings": [
+    {
+      "serviceId": "pg-37c7de3b",
+      "metric": "disk_usage",
+      "series": "pg-37c7de3b-8 (master)",
+      "min": 9.051,
+      "avg": 9.151,
+      "max": 9.245,
+      "latest": 9.245,
+      "from": "2026-09-01T10:55:00Z",
+      "to": "2026-09-08T10:55:00Z",
+      "staleHours": 0,
+      "trend": {
+        "perDay": 0.02771428571428558,
+        "windowDays": 7,
+        "daysToFull": 3274.6649484536238,
+        "includesInitialLoad": false
+      }
+    },
+    {
+      "serviceId": "pg-37c7de3b",
+      "metric": "cpu_usage",
+      "series": "pg-37c7de3b-8 (master)",
+      "min": 10.162,
+      "avg": 18.482,
+      "max": 30.88,
+      "latest": 16.428,
+      "from": "2026-09-01T10:55:00Z",
+      "to": "2026-09-08T10:55:00Z",
+      "staleHours": 0
+    },
+    {
+      "serviceId": "pg-37c7de3b",
+      "metric": "mem_usage",
+      "series": "pg-37c7de3b-8 (master)",
+      "min": 46.236,
+      "avg": 47.583,
+      "max": 49.643,
+      "latest": 46.676,
+      "from": "2026-09-01T10:55:00Z",
+      "to": "2026-09-08T10:55:00Z",
+      "staleHours": 0
+    }
+  ],
+  "dependents": {
+    "datasets": 5,
+    "downstreamAssets": [
+      "kafka.webshop.public.customers",
+      "kafka.webshop.public.products",
+      "kafka.webshop.public.orders",
+      "kafka.webshop.public.order_items",
+      "ch.pg.marketing.campaigns",
+      "trino.summit_pg",
+      "app.datahub-1c8ec127"
+    ],
+    "downstreamServices": [
+      "kafka-1b5cb1e7",
+      "clickhouse-2a6274d2",
+      "trino-hub",
+      "datahub-1c8ec127"
+    ],
+    "credentialHolders": [
+      "webshop-simulator"
+    ],
+    "stacks": [
+      "Webshop"
+    ]
+  },
+  "plan": {
+    "current": {
+      "serviceType": "pg",
+      "plan": "startup-4",
+      "cloud": "aws-eu-west-1",
+      "usdPerHour": 0.151,
+      "diskGb": 80,
+      "extraDiskUsdPerGbHour": 0.0004973907371
+    },
+    "options": [],
+    "downsize": {
+      "verdict": "would not fit",
+      "monthlyUsdForgone": 85.41,
+      "smaller": {
+        "serviceType": "pg",
+        "plan": "hobbyist",
+        "cloud": "aws-eu-west-1",
+        "usdPerHour": 0.034,
+        "diskGb": 8
+      },
+      "because": "7.4 GB would be 92% of hobbyist's 8 GB, past the 67% this is allowed to leave. The $85.41 a month is real and so is the disk-full incident that follows it."
+    },
+    "note": "On startup-4, disk can be bought without changing plan at $0.000497 per GB per hour."
+  },
+  "lifecycle": {
+    "state": "RUNNING",
+    "stateReadAt": "2026-09-07T07:20:00Z",
+    "stateMeans": "Serving traffic. Normal, and the only state in which most changes are safe to attempt.",
+    "maintenanceWindow": "friday at 20:29:11 UTC",
+    "updates": [],
+    "note": "Nothing is queued as of this capture. Updates appear with little notice, so this is a reading rather than a promise."
+  },
+  "descriptionReview": {
+    "author": "the catalog snapshot",
+    "at": "2026-09-15",
+    "state": "accepted",
+    "sources": [
+      "this catalog, authored when the project was walked"
+    ]
+  },
+  "deviations": [
+    {
+      "id": "pg-no-hba",
+      "serviceTypes": [
+        "pg"
+      ],
+      "kind": "not configurable",
+      "title": "There is no pg_hba.conf to edit",
+      "detail": "Host-based authentication is managed by the platform and not exposed. Network access is the service IP filter, and everything else is roles and grants inside the database. An agent reasoning from upstream Postgres will reach for the file first, and the file is not there.",
+      "docUrl": "https://aiven.io/docs/platform/howto/restrict-access",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "pg-no-superuser",
+      "serviceTypes": [
+        "pg"
+      ],
+      "kind": "differs from upstream",
+      "title": "avnadmin is not a superuser",
+      "detail": "The administrative account has most privileges but not superuser, so anything requiring it fails: ALTER SYSTEM, untrusted procedural languages, and a handful of extensions. Server settings change through the service configuration API instead, which applies them the supported way and survives the next node rebuild.",
+      "docUrl": "https://aiven.io/docs/tools/api",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "pg-extensions",
+      "serviceTypes": [
+        "pg"
+      ],
+      "kind": "not configurable",
+      "title": "Extensions come from a supported list, and some are not installed by CREATE EXTENSION",
+      "detail": "Only extensions Aiven packages are available, and several need enabling through service configuration rather than SQL. \"It is on PGXN\" is not a reason it can be installed here. Georg Traar named this as one of the deviations that is barely documented anywhere the customer can see.",
+      "docUrl": "https://aiven.io/docs/products/postgresql/reference/list-of-extensions",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "pg-connection-reserve",
+      "serviceTypes": [
+        "pg"
+      ],
+      "kind": "differs from upstream",
+      "title": "Not all of max_connections is yours",
+      "detail": "The platform reserves connections for its own monitoring, backup and maintenance users, so a service reporting 100 gives the application slightly fewer. Connection pooling is a managed feature rather than something installed on the node.",
+      "docUrl": "https://aiven.io/docs/products/postgresql/reference/pg-connection-limits",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "auto-updates",
+      "serviceTypes": [
+        "*"
+      ],
+      "kind": "managed automatically",
+      "title": "Minor versions and platform software update themselves",
+      "detail": "Security patches and minor version upgrades are applied in the maintenance window without being requested. A version changing between two readings of this catalog is expected behaviour rather than an incident, which is worth knowing before an agent opens one.",
+      "docUrl": "https://aiven.io/docs/platform/concepts/maintenance-window",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "platform-agents",
+      "serviceTypes": [
+        "*"
+      ],
+      "kind": "managed automatically",
+      "title": "Aiven software runs on the nodes alongside yours",
+      "detail": "Monitoring, backup and orchestration processes run on every service, hold their own database connections, and appear in statistics as sessions and queries nobody in your team wrote. Customers are not generally aware of this, so the unexplained connection is usually ours.",
+      "docUrl": "https://aiven.io/docs/platform/concepts/service-power-cycle",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "rebuild-not-edit",
+      "serviceTypes": [
+        "*"
+      ],
+      "kind": "differs from upstream",
+      "title": "Many changes replace the nodes rather than modify them",
+      "detail": "A plan change or a maintenance update generally builds new nodes and moves service to them, so node names change and anything pinned to a host or an IP breaks. This is why a plan change on a single-node service is downtime rather than a resize.",
+      "docUrl": "https://aiven.io/docs/platform/howto/scale-services",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "disk-without-plan",
+      "serviceTypes": [
+        "*"
+      ],
+      "kind": "differs from upstream",
+      "title": "Disk can sometimes grow without a plan change",
+      "detail": "On plans that support it, storage is added to the running service, which makes \"we are running out of disk\" a smaller problem here than the upstream instinct of provisioning a bigger machine. Whether this service is one of them is in the plan block.",
+      "docUrl": "https://aiven.io/docs/platform/concepts/dynamic-disk-sizing",
+      "reviewed": "2026-09-15"
+    },
+    {
+      "id": "backup-is-fork",
+      "serviceTypes": [
+        "*"
+      ],
+      "kind": "differs from upstream",
+      "title": "Restoring means forking to a new service",
+      "detail": "Backups are not restored in place. The supported path creates a new service at a point in time, which you then move traffic to — so a restore is a migration with a connection-string change, not an afternoon of pg_restore. Worth knowing before promising a rollback that assumes otherwise.",
+      "docUrl": "https://aiven.io/docs/platform/howto/console-fork-service",
+      "reviewed": "2026-09-15"
+    }
+  ],
+  "summary": "pg-37c7de3b is PostgreSQL, currently RUNNING, critical in production. Webshop system of record. It holds 5 catalogued datasets and 41 described columns. Statement time and retained bytes account for $110.20 a month of this service's bill. A smaller plan would save $85.41 a month but the data would not fit on it. Acting here eventually reaches clickhouse-2a6274d2, datahub-1c8ec127, kafka-1b5cb1e7 and trino-hub. 3 findings, worst: Reachable from 0.0.0.0/0 (danger). Unattended, an agent may read metadata, read metrics and read query statistics. Forbidden: delete the service, drop the replication slot and disable backups. A change freeze is in force: Data Innovation Summit. The project is on stage, so nothing changes unattended, however good the reason. Policy basis: written for this service, overriding what its criticality would give it.",
+  "data": {
+    "datasets": 5,
+    "columns": 41,
+    "assets": [
+      {
+        "id": "pg.public.customers",
+        "name": "customers",
+        "kind": "table",
+        "qualifiedName": "pg-37c7de3b.public.customers",
+        "description": "Webshop customers. Source of CDC topic webshop.public.customers.",
+        "rowCount": 895294,
+        "tags": [
+          "webshop",
+          "pii",
+          "cdc"
+        ],
+        "columns": [
+          {
+            "name": "id",
+            "type": "bigint",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Surrogate key; orders.customer_id points here"
+          },
+          {
+            "name": "email",
+            "type": "text",
+            "constraint": "UQ",
+            "nullable": false,
+            "note": "Contact address, and the key the loader upserts on"
+          },
+          {
+            "name": "name",
+            "type": "text",
+            "nullable": false,
+            "note": "Customer full name; personal data"
+          },
+          {
+            "name": "region",
+            "type": "text",
+            "nullable": false,
+            "note": "Sales region, the grain campaigns are targeted at"
+          },
+          {
+            "name": "country",
+            "type": "text",
+            "nullable": false,
+            "note": "Country within the region"
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz",
+            "nullable": false,
+            "note": "Insert time, set by the database"
+          },
+          {
+            "name": "updated_at",
+            "type": "timestamptz",
+            "nullable": false,
+            "note": "Last write; no UPDATE of this table was captured, so it tracks created_at"
+          }
+        ],
+        "deletion": {
+          "assetId": "pg.public.customers",
+          "verdict": "unsafe",
+          "because": "Something is using it: 8 catalogued downstream readers, an application writes into it, 1 foreign key points at it, so the drop fails on the constraint, 350,153 recorded calls. Deleting it breaks that, and the break is not reversible by re-creating an empty one.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "8 catalogued hops out: kafka-1b5cb1e7.webshop.public.customers, datahub.datahub-1c8ec127",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Writers",
+              "found": "Written by application.webshop-simulator",
+              "source": "this catalog, from application configuration"
+            },
+            {
+              "what": "Foreign keys pointing at it",
+              "found": "1 referencing table: pg-37c7de3b.public.orders",
+              "source": "pg_constraint"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "Named by recorded statements, 350,153 calls across the 4 slowest",
+              "source": "pg_stat_statements, all 99 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        },
+        "cost": {
+          "usdPerMonth": 47.83,
+          "share": 0.43391,
+          "basis": "statement time",
+          "method": "43.4% of the total statement time captured on this service, applied to $110.23 a month. It apportions the bill by load rather than measuring what the table costs, and the bill does not fall until the plan does."
+        }
+      },
+      {
+        "id": "pg.public.products",
+        "name": "products",
+        "kind": "table",
+        "qualifiedName": "pg-37c7de3b.public.products",
+        "description": "Product catalog sourced by the simulator and streamed via Debezium.",
+        "rowCount": 51,
+        "tags": [
+          "webshop",
+          "cdc"
+        ],
+        "columns": [
+          {
+            "name": "id",
+            "type": "bigint",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Surrogate key; order_items.product_id points here"
+          },
+          {
+            "name": "sku",
+            "type": "text",
+            "constraint": "UQ",
+            "nullable": false,
+            "note": "Stock keeping unit, the business key"
+          },
+          {
+            "name": "name",
+            "type": "text",
+            "nullable": false,
+            "note": "Product display name"
+          },
+          {
+            "name": "category",
+            "type": "text",
+            "nullable": false,
+            "note": "Merchandising category"
+          },
+          {
+            "name": "price",
+            "type": "numeric(10,2)",
+            "nullable": false,
+            "note": "Current unit price; order_items.unit_price keeps the price actually charged"
+          },
+          {
+            "name": "inventory",
+            "type": "integer",
+            "nullable": false,
+            "note": "Units in stock, decremented per order item and floored at 0"
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz",
+            "nullable": false,
+            "note": "Insert time, set by the database"
+          },
+          {
+            "name": "updated_at",
+            "type": "timestamptz",
+            "nullable": false,
+            "note": "Bumped by every price and inventory write"
+          }
+        ],
+        "deletion": {
+          "assetId": "pg.public.products",
+          "verdict": "unsafe",
+          "because": "Something is using it: 8 catalogued downstream readers, an application writes into it, 1 foreign key points at it, so the drop fails on the constraint, 1,115,362 recorded calls. Deleting it breaks that, and the break is not reversible by re-creating an empty one.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "8 catalogued hops out: kafka-1b5cb1e7.webshop.public.products",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Writers",
+              "found": "Written by application.webshop-simulator",
+              "source": "this catalog, from application configuration"
+            },
+            {
+              "what": "Foreign keys pointing at it",
+              "found": "1 referencing table: pg-37c7de3b.public.order_items",
+              "source": "pg_constraint"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "Named by recorded statements, 1,115,362 calls across the 4 slowest",
+              "source": "pg_stat_statements, all 99 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        },
+        "cost": {
+          "usdPerMonth": 0.03,
+          "share": 0.00024,
+          "basis": "statement time",
+          "method": "0.0% of the total statement time captured on this service, applied to $110.23 a month. It apportions the bill by load rather than measuring what the table costs, and the bill does not fall until the plan does."
+        }
+      },
+      {
+        "id": "pg.public.orders",
+        "name": "orders",
+        "kind": "table",
+        "qualifiedName": "pg-37c7de3b.public.orders",
+        "description": "Orders written by webshop-simulator. FK to customers.",
+        "rowCount": 6258540,
+        "tags": [
+          "webshop",
+          "cdc",
+          "fact"
+        ],
+        "columns": [
+          {
+            "name": "id",
+            "type": "bigint",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Surrogate key; order_items.order_id points here"
+          },
+          {
+            "name": "customer_id",
+            "type": "bigint",
+            "constraint": "FK",
+            "nullable": false,
+            "note": "FK to customers.id"
+          },
+          {
+            "name": "status",
+            "type": "text",
+            "nullable": false,
+            "note": "Lifecycle state, starts at pending and is advanced in place"
+          },
+          {
+            "name": "total",
+            "type": "numeric(12,2)",
+            "nullable": false,
+            "note": "Order value, rewritten once the line items exist"
+          },
+          {
+            "name": "region",
+            "type": "text",
+            "nullable": false,
+            "note": "Copied from the customer's region so reporting need not join"
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz",
+            "nullable": false,
+            "note": "Insert time, set by the database"
+          },
+          {
+            "name": "updated_at",
+            "type": "timestamptz",
+            "nullable": false,
+            "note": "Bumped by every status and total write"
+          }
+        ],
+        "deletion": {
+          "assetId": "pg.public.orders",
+          "verdict": "unsafe",
+          "because": "Something is using it: 8 catalogued downstream readers, an application writes into it, 1 foreign key points at it, so the drop fails on the constraint, 699,933 recorded calls. Deleting it breaks that, and the break is not reversible by re-creating an empty one.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "8 catalogued hops out: kafka-1b5cb1e7.webshop.public.orders, trino-hub.summit_pg",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Writers",
+              "found": "Written by application.webshop-simulator",
+              "source": "this catalog, from application configuration"
+            },
+            {
+              "what": "Foreign keys pointing at it",
+              "found": "1 referencing table: pg-37c7de3b.public.order_items",
+              "source": "pg_constraint"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "Named by recorded statements, 699,933 calls across the 5 slowest",
+              "source": "pg_stat_statements, all 99 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        },
+        "cost": {
+          "usdPerMonth": 62.28,
+          "share": 0.56504,
+          "basis": "statement time",
+          "method": "56.5% of the total statement time captured on this service, applied to $110.23 a month. It apportions the bill by load rather than measuring what the table costs, and the bill does not fall until the plan does."
+        }
+      },
+      {
+        "id": "pg.public.order_items",
+        "name": "order_items",
+        "kind": "table",
+        "qualifiedName": "pg-37c7de3b.public.order_items",
+        "description": "Line items. FK to orders and products.",
+        "rowCount": 15648526,
+        "tags": [
+          "webshop",
+          "cdc",
+          "fact"
+        ],
+        "columns": [
+          {
+            "name": "id",
+            "type": "bigint",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Surrogate key"
+          },
+          {
+            "name": "order_id",
+            "type": "bigint",
+            "constraint": "FK",
+            "nullable": false,
+            "note": "FK to orders.id"
+          },
+          {
+            "name": "product_id",
+            "type": "bigint",
+            "constraint": "FK",
+            "nullable": false,
+            "note": "FK to products.id"
+          },
+          {
+            "name": "quantity",
+            "type": "integer",
+            "nullable": false,
+            "note": "Units ordered; the same amount leaves products.inventory"
+          },
+          {
+            "name": "unit_price",
+            "type": "numeric(10,2)",
+            "nullable": false,
+            "note": "Price charged at order time, deliberately not the current products.price"
+          }
+        ],
+        "deletion": {
+          "assetId": "pg.public.order_items",
+          "verdict": "unsafe",
+          "because": "Something is using it: 5 catalogued downstream readers, an application writes into it, 765,435 recorded calls. Deleting it breaks that, and the break is not reversible by re-creating an empty one.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "5 catalogued hops out: kafka-1b5cb1e7.webshop.public.order_items",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Writers",
+              "found": "Written by application.webshop-simulator",
+              "source": "this catalog, from application configuration"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "Named by recorded statements, 765,435 calls across the 1 slowest",
+              "source": "pg_stat_statements, all 99 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        },
+        "cost": {
+          "usdPerMonth": 0.06,
+          "share": 0.00051,
+          "basis": "statement time",
+          "method": "0.1% of the total statement time captured on this service, applied to $110.23 a month. It apportions the bill by load rather than measuring what the table costs, and the bill does not fall until the plan does."
+        }
+      },
+      {
+        "id": "pg.marketing.campaigns",
+        "name": "campaigns",
+        "kind": "table",
+        "qualifiedName": "pg-37c7de3b.marketing.campaigns",
+        "description": "Marketing campaigns federated into ClickHouse over clickhouse_postgresql.",
+        "rowCount": 16,
+        "tags": [
+          "marketing"
+        ],
+        "columns": [
+          {
+            "name": "id",
+            "type": "bigint",
+            "constraint": "PK",
+            "nullable": false,
+            "note": "Surrogate key"
+          },
+          {
+            "name": "name",
+            "type": "text",
+            "constraint": "UQ",
+            "nullable": false,
+            "note": "Campaign name, unique"
+          },
+          {
+            "name": "region",
+            "type": "text",
+            "nullable": false,
+            "note": "Sales region targeted, same vocabulary as customers.region"
+          },
+          {
+            "name": "country",
+            "type": "text",
+            "nullable": true,
+            "note": "Single-country target; null means the whole region"
+          },
+          {
+            "name": "channel",
+            "type": "text",
+            "nullable": false,
+            "note": "Channel the campaign runs on"
+          },
+          {
+            "name": "start_date",
+            "type": "date",
+            "nullable": false,
+            "note": "First day the campaign is live"
+          },
+          {
+            "name": "end_date",
+            "type": "date",
+            "nullable": false,
+            "note": "Last day the campaign is live"
+          },
+          {
+            "name": "discount_pct",
+            "type": "numeric(5,2)",
+            "nullable": false,
+            "note": "Discount offered, in percent"
+          },
+          {
+            "name": "budget_eur",
+            "type": "numeric(12,2)",
+            "nullable": false,
+            "note": "Planned spend, EUR"
+          },
+          {
+            "name": "target_revenue_eur",
+            "type": "numeric(12,2)",
+            "nullable": false,
+            "note": "Revenue this campaign is meant to bring in, EUR"
+          },
+          {
+            "name": "status",
+            "type": "text",
+            "nullable": false,
+            "note": "Campaign state, starts at planned"
+          },
+          {
+            "name": "description",
+            "type": "text",
+            "nullable": true,
+            "note": "Free-text brief"
+          },
+          {
+            "name": "created_at",
+            "type": "timestamptz",
+            "nullable": false,
+            "note": "Insert time, set by the database"
+          },
+          {
+            "name": "updated_at",
+            "type": "timestamptz",
+            "nullable": false,
+            "note": "Last edit time"
+          }
+        ],
+        "deletion": {
+          "assetId": "pg.marketing.campaigns",
+          "verdict": "unsafe",
+          "because": "Something is using it: 14 catalogued downstream readers, a recorded statement names it. Deleting it breaks that, and the break is not reversible by re-creating an empty one.",
+          "evidence": [
+            {
+              "what": "Downstream readers",
+              "found": "14 catalogued hops out: clickhouse-2a6274d2.service_pg-37c7de3b.marketing.campaigns",
+              "source": "this catalog, from connector configuration and schemas"
+            },
+            {
+              "what": "Recorded statements",
+              "found": "Named by at least one of the 99 recorded statements",
+              "source": "pg_stat_statements, all 99 read 2026-09-15"
+            },
+            {
+              "what": "Last write",
+              "found": "Not captured. No tool in this snapshot reports a last-write or last-produce time.",
+              "source": "—"
+            }
+          ]
+        }
+      }
+    ],
+    "note": "Descriptions and tags as catalogued. Edits made in the browser live in that browser and are not in this file."
+  },
+  "lineage": {
+    "upstreamServices": [
+      "webshop-simulator"
+    ],
+    "downstreamServices": [
+      "kafka-1b5cb1e7",
+      "clickhouse-2a6274d2",
+      "trino-hub",
+      "datahub-1c8ec127"
+    ],
+    "reachesEventually": [
+      "clickhouse-2a6274d2",
+      "datahub-1c8ec127",
+      "kafka-1b5cb1e7",
+      "trino-hub"
+    ],
+    "inbound": [
+      {
+        "from": "app.webshop-simulator",
+        "to": "pg.public.customers",
+        "fromService": "webshop-simulator",
+        "toService": "pg-37c7de3b",
+        "via": "application_service_credential",
+        "kind": "app_write",
+        "confidence": "dataset"
+      },
+      {
+        "from": "app.webshop-simulator",
+        "to": "pg.public.products",
+        "fromService": "webshop-simulator",
+        "toService": "pg-37c7de3b",
+        "via": "application_service_credential",
+        "kind": "app_write",
+        "confidence": "dataset"
+      },
+      {
+        "from": "app.webshop-simulator",
+        "to": "pg.public.orders",
+        "fromService": "webshop-simulator",
+        "toService": "pg-37c7de3b",
+        "via": "application_service_credential",
+        "kind": "app_write",
+        "confidence": "dataset"
+      },
+      {
+        "from": "app.webshop-simulator",
+        "to": "pg.public.order_items",
+        "fromService": "webshop-simulator",
+        "toService": "pg-37c7de3b",
+        "via": "application_service_credential",
+        "kind": "app_write",
+        "confidence": "dataset"
+      }
+    ],
+    "outbound": [
+      {
+        "from": "pg.public.customers",
+        "to": "kafka.webshop.public.customers",
+        "fromService": "pg-37c7de3b",
+        "toService": "kafka-1b5cb1e7",
+        "via": "webshop-pg-cdc · Debezium pgoutput",
+        "kind": "cdc",
+        "confidence": "column",
+        "column": "id"
+      },
+      {
+        "from": "pg.public.customers",
+        "to": "kafka.webshop.public.customers",
+        "fromService": "pg-37c7de3b",
+        "toService": "kafka-1b5cb1e7",
+        "via": "webshop-pg-cdc · Debezium pgoutput",
+        "kind": "cdc",
+        "confidence": "column",
+        "column": "email"
+      },
+      {
+        "from": "pg.public.customers",
+        "to": "kafka.webshop.public.customers",
+        "fromService": "pg-37c7de3b",
+        "toService": "kafka-1b5cb1e7",
+        "via": "webshop-pg-cdc · Debezium pgoutput",
+        "kind": "cdc",
+        "confidence": "column",
+        "column": "name"
+      },
+      {
+        "from": "pg.public.customers",
+        "to": "kafka.webshop.public.customers",
+        "fromService": "pg-37c7de3b",
+        "toService": "kafka-1b5cb1e7",
+        "via": "webshop-pg-cdc · Debezium pgoutput",
+        "kind": "cdc",
+        "confidence": "column",
+        "column": "region"
+      },
+      {
+        "from": "pg.public.customers",
+        "to": "kafka.webshop.public.customers",
+        "fromService": "pg-37c7de3b",
+        "toService": "kafka-1b5cb1e7",
+        "via": "webshop-pg-cdc · Debezium pgoutput",
+        "kind": "cdc",
+        "confidence": "column",
+        "column": "country"
+      },
+      {
+        "from": "pg.public.customers",
+        "to": "kafka.webshop.public.customers",
+        "fromService": "pg-37c7de3b",
+        "toService": "kafka-1b5cb1e7",
+        "via": "webshop-pg-cdc · Debezium pgoutput",
+        "kind": "cdc",
+        "confidence": "column",
+        "column": "created_at"
+      },
+      {
+        "from": "pg.public.customers",
+        "to": "kafka.webshop.public.customers",
+        "fromService": "pg-37c7de3b",
+        "toService": "kafka-1b5cb1e7",
+        "via": "webshop-pg-cdc · Debezium pgoutput",
+        "kind": "cdc",
+        "confidence": "column",
+        "column": "updated_at"
+      },
+      {
+        "from": "pg.public.products",
+        "to": "kafka.webshop.public.products",
+        "fromService": "pg-37c7de3b",
+        "toService": "kafka-1b5cb1e7",
+        "via": "webshop-pg-cdc · Debezium pgoutput",
+        "kind": "cdc",
+        "confidence": "column",
+        "column": "id"
+      },
+      {
+        "from": "pg.public.products",
+        "to": "kafka.webshop.public.products",
+        "fromService": "pg-37c7de3b",
+        "toService": "kafka-1b5cb1e7",
+        "via": "webshop-pg-cdc · Debezium pgoutput",
+        "kind": "cdc",
+        "confidence": "column",
+        "column": "sku"
+      },
+      {
+        "from": "pg.public.products",
+        "to": "kafka.webshop.public.products",
+        "fromService": "pg-37c7de3b",
+        "toService": "kafka-1b5cb1e7",
+        "via": "webshop-pg-cdc · Debezium pgoutput",
+        "kind": "cdc",
+        "confidence": "column",
+        "column": "name"
+      },
+      {
+        "from": "pg.public.products",
+        "to": "kafka.webshop.public.products",
+        "fromService": "pg-37c7de3b",
+        "toService": "kafka-1b5cb1e7",
+        "via": "webshop-pg-cdc · Debezium pgoutput",
+        "kind": "cdc",
+        "confidence": "column",
+        "column": "category"
+      },
+      {
+        "from": "pg.public.products",
+        "to": "kafka.webshop.public.products",
+        "fromService": "pg-37c7de3b",
+        "toService": "kafka-1b5cb1e7",
+        "via": "webshop-pg-cdc · Debezium pgoutput",
+        "kind": "cdc",
+        "confidence": "column",
+        "column": "price"
+      },
+      {
+        "from": "pg.public.products",
+        "to": "kafka.webshop.public.products",
+        "fromService": "pg-37c7de3b",
+        "toService": "kafka-1b5cb1e7",
+        "via": "webshop-pg-cdc · Debezium pgoutput",
+        "kind": "cdc",
+        "confidence": "column",
+        "column": "inventory"
+      },
+      {
+        "from": "pg.public.products",
+        "to": "kafka.webshop.public.products",
+        "fromService": "pg-37c7de3b",
+        "toService": "kafka-1b5cb1e7",
+        "via": "webshop-pg-cdc · Debezium pgoutput",
+        "kind": "cdc",
+        "confidence": "column",
+        "column": "created_at"
+      },
+      {
+        "from": "pg.public.products",
+        "to": "kafka.webshop.public.products",
+        "fromService": "pg-37c7de3b",
+        "toService": "kafka-1b5cb1e7",
+        "via": "webshop-pg-cdc · Debezium pgoutput",
+        "kind": "cdc",
+        "confidence": "column",
+        "column": "updated_at"
+      },
+      {
+        "from": "pg.public.orders",
+        "to": "kafka.webshop.public.orders",
+        "fromService": "pg-37c7de3b",
+        "toService": "kafka-1b5cb1e7",
+        "via": "webshop-pg-cdc · Debezium pgoutput",
+        "kind": "cdc",
+        "confidence": "column",
+        "column": "id"
+      },
+      {
+        "from": "pg.public.orders",
+        "to": "kafka.webshop.public.orders",
+        "fromService": "pg-37c7de3b",
+        "toService": "kafka-1b5cb1e7",
+        "via": "webshop-pg-cdc · Debezium pgoutput",
+        "kind": "cdc",
+        "confidence": "column",
+        "column": "customer_id"
+      },
+      {
+        "from": "pg.public.orders",
+        "to": "kafka.webshop.public.orders",
+        "fromService": "pg-37c7de3b",
+        "toService": "kafka-1b5cb1e7",
+        "via": "webshop-pg-cdc · Debezium pgoutput",
+        "kind": "cdc",
+        "confidence": "column",
+        "column": "status"
+      },
+      {
+        "from": "pg.public.orders",
+        "to": "kafka.webshop.public.orders",
+        "fromService": "pg-37c7de3b",
+        "toService": "kafka-1b5cb1e7",
+        "via": "webshop-pg-cdc · Debezium pgoutput",
+        "kind": "cdc",
+        "confidence": "column",
+        "column": "total"
+      },
+      {
+        "from": "pg.public.orders",
+        "to": "kafka.webshop.public.orders",
+        "fromService": "pg-37c7de3b",
+        "toService": "kafka-1b5cb1e7",
+        "via": "webshop-pg-cdc · Debezium pgoutput",
+        "kind": "cdc",
+        "confidence": "column",
+        "column": "region"
+      },
+      {
+        "from": "pg.public.orders",
+        "to": "kafka.webshop.public.orders",
+        "fromService": "pg-37c7de3b",
+        "toService": "kafka-1b5cb1e7",
+        "via": "webshop-pg-cdc · Debezium pgoutput",
+        "kind": "cdc",
+        "confidence": "column",
+        "column": "created_at"
+      },
+      {
+        "from": "pg.public.orders",
+        "to": "kafka.webshop.public.orders",
+        "fromService": "pg-37c7de3b",
+        "toService": "kafka-1b5cb1e7",
+        "via": "webshop-pg-cdc · Debezium pgoutput",
+        "kind": "cdc",
+        "confidence": "column",
+        "column": "updated_at"
+      },
+      {
+        "from": "pg.public.order_items",
+        "to": "kafka.webshop.public.order_items",
+        "fromService": "pg-37c7de3b",
+        "toService": "kafka-1b5cb1e7",
+        "via": "webshop-pg-cdc · Debezium pgoutput",
+        "kind": "cdc",
+        "confidence": "column",
+        "column": "id"
+      },
+      {
+        "from": "pg.public.order_items",
+        "to": "kafka.webshop.public.order_items",
+        "fromService": "pg-37c7de3b",
+        "toService": "kafka-1b5cb1e7",
+        "via": "webshop-pg-cdc · Debezium pgoutput",
+        "kind": "cdc",
+        "confidence": "column",
+        "column": "order_id"
+      },
+      {
+        "from": "pg.public.order_items",
+        "to": "kafka.webshop.public.order_items",
+        "fromService": "pg-37c7de3b",
+        "toService": "kafka-1b5cb1e7",
+        "via": "webshop-pg-cdc · Debezium pgoutput",
+        "kind": "cdc",
+        "confidence": "column",
+        "column": "product_id"
+      },
+      {
+        "from": "pg.public.order_items",
+        "to": "kafka.webshop.public.order_items",
+        "fromService": "pg-37c7de3b",
+        "toService": "kafka-1b5cb1e7",
+        "via": "webshop-pg-cdc · Debezium pgoutput",
+        "kind": "cdc",
+        "confidence": "column",
+        "column": "quantity"
+      },
+      {
+        "from": "pg.public.order_items",
+        "to": "kafka.webshop.public.order_items",
+        "fromService": "pg-37c7de3b",
+        "toService": "kafka-1b5cb1e7",
+        "via": "webshop-pg-cdc · Debezium pgoutput",
+        "kind": "cdc",
+        "confidence": "column",
+        "column": "unit_price"
+      },
+      {
+        "from": "pg.marketing.campaigns",
+        "to": "ch.pg.marketing.campaigns",
+        "fromService": "pg-37c7de3b",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_postgresql · defaultdb.marketing",
+        "kind": "pg_federate",
+        "confidence": "column",
+        "column": "id"
+      },
+      {
+        "from": "pg.marketing.campaigns",
+        "to": "ch.pg.marketing.campaigns",
+        "fromService": "pg-37c7de3b",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_postgresql · defaultdb.marketing",
+        "kind": "pg_federate",
+        "confidence": "column",
+        "column": "name"
+      },
+      {
+        "from": "pg.marketing.campaigns",
+        "to": "ch.pg.marketing.campaigns",
+        "fromService": "pg-37c7de3b",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_postgresql · defaultdb.marketing",
+        "kind": "pg_federate",
+        "confidence": "column",
+        "column": "region"
+      },
+      {
+        "from": "pg.marketing.campaigns",
+        "to": "ch.pg.marketing.campaigns",
+        "fromService": "pg-37c7de3b",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_postgresql · defaultdb.marketing",
+        "kind": "pg_federate",
+        "confidence": "column",
+        "column": "country"
+      },
+      {
+        "from": "pg.marketing.campaigns",
+        "to": "ch.pg.marketing.campaigns",
+        "fromService": "pg-37c7de3b",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_postgresql · defaultdb.marketing",
+        "kind": "pg_federate",
+        "confidence": "column",
+        "column": "channel"
+      },
+      {
+        "from": "pg.marketing.campaigns",
+        "to": "ch.pg.marketing.campaigns",
+        "fromService": "pg-37c7de3b",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_postgresql · defaultdb.marketing",
+        "kind": "pg_federate",
+        "confidence": "column",
+        "column": "start_date"
+      },
+      {
+        "from": "pg.marketing.campaigns",
+        "to": "ch.pg.marketing.campaigns",
+        "fromService": "pg-37c7de3b",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_postgresql · defaultdb.marketing",
+        "kind": "pg_federate",
+        "confidence": "column",
+        "column": "end_date"
+      },
+      {
+        "from": "pg.marketing.campaigns",
+        "to": "ch.pg.marketing.campaigns",
+        "fromService": "pg-37c7de3b",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_postgresql · defaultdb.marketing",
+        "kind": "pg_federate",
+        "confidence": "column",
+        "column": "discount_pct"
+      },
+      {
+        "from": "pg.marketing.campaigns",
+        "to": "ch.pg.marketing.campaigns",
+        "fromService": "pg-37c7de3b",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_postgresql · defaultdb.marketing",
+        "kind": "pg_federate",
+        "confidence": "column",
+        "column": "budget_eur"
+      },
+      {
+        "from": "pg.marketing.campaigns",
+        "to": "ch.pg.marketing.campaigns",
+        "fromService": "pg-37c7de3b",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_postgresql · defaultdb.marketing",
+        "kind": "pg_federate",
+        "confidence": "column",
+        "column": "target_revenue_eur"
+      },
+      {
+        "from": "pg.marketing.campaigns",
+        "to": "ch.pg.marketing.campaigns",
+        "fromService": "pg-37c7de3b",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_postgresql · defaultdb.marketing",
+        "kind": "pg_federate",
+        "confidence": "column",
+        "column": "status"
+      },
+      {
+        "from": "pg.marketing.campaigns",
+        "to": "ch.pg.marketing.campaigns",
+        "fromService": "pg-37c7de3b",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_postgresql · defaultdb.marketing",
+        "kind": "pg_federate",
+        "confidence": "column",
+        "column": "description"
+      },
+      {
+        "from": "pg.marketing.campaigns",
+        "to": "ch.pg.marketing.campaigns",
+        "fromService": "pg-37c7de3b",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_postgresql · defaultdb.marketing",
+        "kind": "pg_federate",
+        "confidence": "column",
+        "column": "created_at"
+      },
+      {
+        "from": "pg.marketing.campaigns",
+        "to": "ch.pg.marketing.campaigns",
+        "fromService": "pg-37c7de3b",
+        "toService": "clickhouse-2a6274d2",
+        "via": "clickhouse_postgresql · defaultdb.marketing",
+        "kind": "pg_federate",
+        "confidence": "column",
+        "column": "updated_at"
+      },
+      {
+        "from": "pg.public.orders",
+        "to": "trino.summit_pg",
+        "fromService": "pg-37c7de3b",
+        "toService": "trino-hub",
+        "via": "Trino catalog summit_pg",
+        "kind": "query_federation",
+        "confidence": "dataset"
+      },
+      {
+        "from": "pg.public.customers",
+        "to": "app.datahub-1c8ec127",
+        "fromService": "pg-37c7de3b",
+        "toService": "datahub-1c8ec127",
+        "via": "datahub_metadata_ingestion · metadata only, emit_lineage off",
+        "kind": "metadata",
+        "confidence": "dataset"
+      }
+    ],
+    "internalHops": 3,
+    "integrations": [
+      {
+        "type": "application_service_credential",
+        "thisServiceIs": "source",
+        "peer": "webshop-simulator",
+        "active": true,
+        "description": "Simulator writes webshop rows into PostgreSQL."
+      },
+      {
+        "type": "debezium_cdc",
+        "thisServiceIs": "source",
+        "peer": "kafka-1b5cb1e7",
+        "active": true,
+        "description": "Kafka Connect connector webshop-pg-cdc: Debezium pgoutput on publication debezium_webshop, four public tables to Avro topics. Runs on kafkaconnect-30e121dd rather than as its own integration."
+      },
+      {
+        "type": "clickhouse_postgresql",
+        "thisServiceIs": "source",
+        "peer": "clickhouse-2a6274d2",
+        "active": true,
+        "description": "Federates defaultdb.marketing into ClickHouse."
+      },
+      {
+        "type": "datahub_metadata_ingestion",
+        "thisServiceIs": "source",
+        "peer": "datahub-1c8ec127",
+        "active": true,
+        "description": "PostgreSQL metadata into DataHub. emit_lineage is off, so no lineage is emitted."
+      },
+      {
+        "type": "trino_catalog",
+        "thisServiceIs": "source",
+        "peer": "trino-hub",
+        "active": true,
+        "description": "Trino catalog summit_pg, configured inside the Trino application. Aiven has no Trino integration type, so there is nothing to verify against the API."
+      }
+    ],
+    "note": "Lineage is catalogued from connector configuration and schemas, not traced at runtime. A `dataset` confidence means the tables are known to be connected without the column mapping being read."
+  },
+  "boundaries": {
+    "doNotRead": [],
+    "handleCarefully": [
+      {
+        "assetId": "pg.public.customers",
+        "name": "pg-37c7de3b.public.customers",
+        "tag": "pii",
+        "reason": "Personal data about identifiable people. Handle under the privacy policy and avoid new copies."
+      }
+    ],
+    "note": "These come from the data, and apply to reads. What may be done to the service itself is in `policy`, and an operation absent from all three of its lists is one nobody has considered: treat it as forbidden."
+  }
+}
